@@ -15,6 +15,9 @@ import RightSkillsLanding from './pages/RightSkillsLanding'; // New Landing Page
 import RegisterProvider from './pages/RegisterProvider';
 import RegisterTrainer from './pages/RegisterTrainer';
 import RegisterLearner from './pages/RegisterLearner';
+import LecturerProfile from './pages/LecturerProfile';
+import LecturerDashboard from './pages/LecturerDashboard';
+import LecturerCourseDetail from './pages/LecturerCourseDetail';
 
 
 function App() {
@@ -57,6 +60,8 @@ function App() {
                   </Typography>
                 </Link>
                 <Link to="/registration" ><Typography>Registration</Typography></Link>
+                <Link to="/lecturer-profile" ><Typography>Lecturer Profile</Typography></Link>
+                <Link to="/lecturer-dashboard" ><Typography>Lecturer Dashboard</Typography></Link>
 
                 <Box sx={{ flexGrow: 1 }}></Box>
 
@@ -95,6 +100,9 @@ function App() {
               <Route path={"/register-provider"} element={<RegisterProvider />} />
               <Route path={"/register-trainer"} element={<RegisterTrainer />} />
               <Route path={"/register-learner"} element={<RegisterLearner />} />
+              <Route path={"/lecturer-profile"} element={<LecturerProfile />} />
+              <Route path={"/lecturer-dashboard"} element={<LecturerDashboard />} />
+              <Route path={"/lecturer-dashboard/:id"} element={<LecturerCourseDetail />} />
               {/* Maintain your rest login/register routers safely here... */}
           
               <Route path={"/register"} element={<Register />} />

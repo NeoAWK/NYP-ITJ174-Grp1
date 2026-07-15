@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Grid, Card, CardContent, CardActionArea } from '@mui/material';
-import { Business, School, Group } from '@mui/icons-material';
+import { Business, School, Group, WorkspacePremium, DashboardCustomize } from '@mui/icons-material';
 import UserContext from '../contexts/UserContext';
 
 function RightSkillsLanding() {
@@ -64,6 +64,32 @@ function RightSkillsLanding() {
                                 <Group sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
                                 <Typography variant="h6" fontWeight="bold">
                                     Register Learners
+                                </Typography>
+                            </CardContent>
+                        </CardActionArea>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+                        <CardActionArea onClick={() => navigate('/lecturer-profile')}>
+                            <CardContent sx={{ py: 5 }}>
+                                <WorkspacePremium sx={{ fontSize: 60, color: 'warning.main', mb: 2 }} />
+                                <Typography variant="h6" fontWeight="bold">
+                                    External Lecturer Profile Editor
+                                </Typography>
+                            </CardContent>
+                        </CardActionArea>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+                        <CardActionArea onClick={() => navigate('/lecturer-dashboard')}>
+                            <CardContent sx={{ py: 5 }}>
+                                <DashboardCustomize sx={{ fontSize: 60, color: 'info.main', mb: 2 }} />
+                                <Typography variant="h6" fontWeight="bold">
+                                    Full-time Lecturer Dashboard
                                 </Typography>
                             </CardContent>
                         </CardActionArea>
