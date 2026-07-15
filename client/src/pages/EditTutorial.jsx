@@ -99,7 +99,7 @@ function EditTutorial() {
     return (
         <Box>
             <Typography variant="h5" sx={{ my: 2 }}>
-                Edit Tutorial
+                Edit Learning Content
             </Typography>
             {
                 !loading && (
@@ -138,7 +138,7 @@ function EditTutorial() {
                                     {
                                         imageFile && (
                                             <Box className="aspect-ratio-container" sx={{ mt: 2 }}>
-                                                <img alt="tutorial"
+                                                <img alt="learning content"
                                                     src={`${import.meta.env.VITE_FILE_BASE_URL}${imageFile}`}>
                                                 </img>
                                             </Box>
@@ -162,11 +162,11 @@ function EditTutorial() {
 
             <Dialog open={open} onClose={handleClose}>
                 <DialogTitle>
-                    Delete Tutorial
+                    Delete Learning Content
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete this tutorial?
+                        Are you sure you want to delete this content item?
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>

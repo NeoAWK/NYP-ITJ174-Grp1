@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { Box, Typography, TextField, Button } from '@mui/material';
+import React, { useContext, useEffect, useState } from 'react';
+import { Box, Typography, TextField, Button, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -11,6 +11,17 @@ import UserContext from '../contexts/UserContext';
 function Login() {
     const navigate = useNavigate();
     const { setUser } = useContext(UserContext);
+    const [backendMode, setBackendMode] = useState('unknown');
+
+    useEffect(() => {
+        http.get('/system/mode')
+            .then((res) => {
+                setBackendMode(res.data.mode || 'unknown');
+            })
+            .catch(() => {
+                setBackendMode('unknown');
+            });
+    }, []);
 
     const formik = useFormik({
         initialValues: {
@@ -61,6 +72,11 @@ function Login() {
             <Typography variant="h5" sx={{ my: 2 }}>
                 Login
             </Typography>
+            {backendMode === 'placeholder' && (
+                <Alert severity="info" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
+                    Temporary account: temp@rightskills.local / TempPass123!
+                </Alert>
+            )}
             <Box component="form" sx={{ maxWidth: '500px' }}
                 onSubmit={formik.handleSubmit}>
                 <TextField

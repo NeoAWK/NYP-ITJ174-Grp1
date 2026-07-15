@@ -1,6 +1,6 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import { Container, AppBar, Toolbar, Typography, Box, Button } from '@mui/material';
+import { Container, AppBar, Toolbar, Typography, Box, Button, Alert } from '@mui/material';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import MyTheme from './themes/MyTheme';
@@ -22,8 +22,17 @@ import RegisterLearner from './pages/RegisterLearner';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [backendMode, setBackendMode] = useState('unknown');
 
   useEffect(() => {
+    http.get('/system/mode')
+      .then((res) => {
+        setBackendMode(res.data.mode || 'unknown');
+      })
+      .catch(() => {
+        setBackendMode('unknown');
+      });
+
     if (localStorage.getItem("accessToken")) {
       http.get('/user/auth').then((res) => {
         setUser(res.data.user);
@@ -50,7 +59,8 @@ function App() {
                     RightSkills
                   </Typography>
                 </Link>
-                <Link to="/tutorials" ><Typography>Registration</Typography></Link>
+                <Link to="/tutorials" ><Typography>Content</Typography></Link>
+                <Link to="/"><Typography>Ecosystem</Typography></Link>
 
                 <Box sx={{ flexGrow: 1 }}></Box>
 
@@ -77,9 +87,17 @@ function App() {
           </AppBar>
 
           <Container>
+            {backendMode === 'placeholder' && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Backend placeholder mode is active. Data shown is sample data and save/upload/auth actions may be unavailable.
+              </Alert>
+            )}
+
             <Routes>
               <Route path={"/"} element={<RightSkillsLanding />} />
-              <Route path={"/tutorials"} element={<RightSkillsLanding />} />
+              <Route path={"/tutorials"} element={<Tutorials />} />
+              <Route path={"/content/new"} element={<AddTutorial />} />
+              <Route path={"/content/:id"} element={<EditTutorial />} />
               <Route path={"/register-provider"} element={<RegisterProvider />} />
               <Route path={"/register-trainer"} element={<RegisterTrainer />} />
               <Route path={"/register-learner"} element={<RegisterLearner />} />

@@ -67,7 +67,7 @@ function AddTutorial() {
     return (
         <Box>
             <Typography variant="h5" sx={{ my: 2 }}>
-                Add Tutorial
+                Add Learning Content
             </Typography>
             <Box component="form" onSubmit={formik.handleSubmit}>
                 <Grid container spacing={2}>
@@ -104,7 +104,7 @@ function AddTutorial() {
                             {
                                 imageFile && (
                                     <Box className="aspect-ratio-container" sx={{ mt: 2 }}>
-                                        <img alt="tutorial"
+                                        <img alt="learning content"
                                             src={`${import.meta.env.VITE_FILE_BASE_URL}${imageFile}`}>
                                         </img>
                                     </Box>
@@ -115,7 +115,7 @@ function AddTutorial() {
                 </Grid>
                 <Box sx={{ mt: 2 }}>
                     <Button variant="contained" type="submit">
-                        Add
+                        Save Content
                     </Button>
                 </Box>
             </Box>
