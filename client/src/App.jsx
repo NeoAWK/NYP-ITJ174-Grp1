@@ -4,9 +4,6 @@ import { Container, AppBar, Toolbar, Typography, Box, Button, Alert } from '@mui
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import MyTheme from './themes/MyTheme';
-import Tutorials from './pages/Tutorials';
-import AddTutorial from './pages/AddTutorial';
-import EditTutorial from './pages/EditTutorial';
 import MyForm from './pages/MyForm';
 import Register from './pages/Register';
 import Profile from './pages/Profile'; // Import Profile page
@@ -59,8 +56,7 @@ function App() {
                     RightSkills
                   </Typography>
                 </Link>
-                <Link to="/tutorials" ><Typography>Content</Typography></Link>
-                <Link to="/"><Typography>Ecosystem</Typography></Link>
+                <Link to="/tutorials" ><Typography>Registration</Typography></Link>
 
                 <Box sx={{ flexGrow: 1 }}></Box>
 
@@ -95,9 +91,7 @@ function App() {
 
             <Routes>
               <Route path={"/"} element={<RightSkillsLanding />} />
-              <Route path={"/tutorials"} element={<Tutorials />} />
-              <Route path={"/content/new"} element={<AddTutorial />} />
-              <Route path={"/content/:id"} element={<EditTutorial />} />
+              <Route path={"/tutorials"} element={<RightSkillsLanding />} />
               <Route path={"/register-provider"} element={<RegisterProvider />} />
               <Route path={"/register-trainer"} element={<RegisterTrainer />} />
               <Route path={"/register-learner"} element={<RegisterLearner />} />
