@@ -56,7 +56,7 @@ function App() {
                     RightSkills
                   </Typography>
                 </Link>
-                <Link to="/tutorials" ><Typography>Registration</Typography></Link>
+                <Link to="/registration" ><Typography>Registration</Typography></Link>
 
                 <Box sx={{ flexGrow: 1 }}></Box>
 
@@ -91,7 +91,7 @@ function App() {
 
             <Routes>
               <Route path={"/"} element={<RightSkillsLanding />} />
-              <Route path={"/tutorials"} element={<RightSkillsLanding />} />
+              <Route path={"/registration"} element={<RightSkillsLanding />} />
               <Route path={"/register-provider"} element={<RegisterProvider />} />
               <Route path={"/register-trainer"} element={<RegisterTrainer />} />
               <Route path={"/register-learner"} element={<RegisterLearner />} />
