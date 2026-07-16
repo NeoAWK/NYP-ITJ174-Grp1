@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import {
     Alert,
     Box,
@@ -15,14 +15,18 @@ import {
     Typography
 } from '@mui/material';
 import { PictureAsPdf, Image as ImageIcon, WorkHistory } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import UserContext from '../contexts/UserContext';
 
 const ACCEPTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 const MAX_CERTIFICATE_SIZE_MB = 5;
 
 function LecturerProfile() {
+    const { user } = useContext(UserContext);
+    const navigate = useNavigate();
     const [certificateFile, setCertificateFile] = useState(null);
     const [certificateGallery, setCertificateGallery] = useState([]);
     const [experienceForm, setExperienceForm] = useState({
@@ -129,6 +133,19 @@ function LecturerProfile() {
 
         toast.success('Professional experience added to the timeline.');
     };
+
+    if (!user) {
+        return (
+            <Box sx={{ mt: 5 }}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    Please log in to access the lecturer profile editor.
+                </Alert>
+                <Button variant="contained" onClick={() => navigate('/login')}>
+                    Go to Login
+                </Button>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ mt: 4, mb: 6 }}>
