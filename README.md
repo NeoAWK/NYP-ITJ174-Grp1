@@ -126,6 +126,9 @@ Use this account when backend runs without DB setup:
 - Email: temp@rightskills.local
 - Password: TempPass123!
 
+- Email for RS Officer: admin123@abc.com
+- Password: test123
+
 ## Main Routes (Client)
 
 - / : landing
