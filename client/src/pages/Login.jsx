@@ -34,7 +34,7 @@ function Login() {
                 .max(50, 'Email must be at most 50 characters')
                 .required('Email is required'),
             password: yup.string().trim()
-                .min(8, 'Password must be at least 8 characters')
+                .min(7, 'Password must be at least 7 characters')
                 .max(50, 'Password must be at most 50 characters')
                 .required('Password is required')
         }),
@@ -44,18 +44,21 @@ function Login() {
             
             http.post("/user/login", data)
                 .then((res) => {
-                    // FIX: Changed emailVerified to isVerified
-                    // This matches your backend User model and prevents the login hang
                     if (!res.data.user.isVerified) {
                         toast.error("Please verify your email before logging in.");
                     } else {
                         localStorage.setItem("accessToken", res.data.accessToken);
                         setUser(res.data.user);
-                        navigate("/");
+
+                        // Route to Officer Dashboard if officer email, else default route
+                        if (res.data.user.email === 'admin123@abc.com') {
+                            navigate("/officer-dashboard");
+                        } else {
+                            navigate("/");
+                        }
                     }
                 })
                 .catch((err) => {
-                    // FIX: Added optional chaining (?.) to prevent crashes if err.response is undefined
                     const message = err.response?.data?.message || "An error occurred during login.";
                     toast.error(message);
                 });
@@ -74,10 +77,11 @@ function Login() {
             </Typography>
             {backendMode === 'placeholder' && (
                 <Alert severity="info" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
-                    Temporary account: temp@rightskills.local / TempPass123!
+                    <strong>Officer Login:</strong> admin123@abc.com / test123 <br />
+                    <strong>Temp Account:</strong> temp@rightskills.local / TempPass123!
                 </Alert>
             )}
-            <Box component="form" sx={{ maxWidth: '500px' }}
+            <Box component="form" sx={{ maxWidth: '500px', width: '100%' }}
                 onSubmit={formik.handleSubmit}>
                 <TextField
                     fullWidth margin="dense" autoComplete="off"
@@ -108,6 +112,7 @@ function Login() {
             <ToastContainer />
         </Box>
     );
+
 }
 
 export default Login;

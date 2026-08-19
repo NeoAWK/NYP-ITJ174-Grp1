@@ -47,6 +47,18 @@ function registerPlaceholderRoutes() {
     };
     const tempPassword = 'TempPass123!';
 
+    // RightSkills Officer User Credentials
+    const officerUser = {
+        id: 9001,
+        email: 'admin123@abc.com',
+        name: 'RightSkills Officer',
+        isVerified: true,
+        mobileNo: '',
+        profilePicture: null,
+        usertype: 'RightSkills'
+    };
+    const officerPassword = 'test123';
+
     const placeholderTutorials = [
         {
             id: 1,
@@ -83,28 +95,28 @@ function registerPlaceholderRoutes() {
     });
 
     app.get('/user/auth', (req, res) => {
-        res.json({ user: tempUser });
+        res.json({ user: officerUser });
     });
 
     app.get('/user/ecosystem-profile', (req, res) => {
         res.json({
-            user: { id: tempUser.id, name: tempUser.name, usertype: tempUser.usertype },
+            user: { id: officerUser.id, name: officerUser.name, usertype: officerUser.usertype },
             details: {
-                orgDetails: 'Placeholder organization details',
-                companyRegistrationId: '',
+                orgDetails: 'RightSkills Governance Officer',
+                companyRegistrationId: 'RS-OFFICER-01',
                 telephoneNo: '',
-                emailAddress: '',
-                accreditationStatus: '',
-                qualifications: '',
-                certification: '',
-                experience: '',
-                professionalDevelopment: '',
-                certificationValidity: '',
-                enrolledCourse: 'Sample Course',
+                emailAddress: officerUser.email,
+                accreditationStatus: 'Active',
+                qualifications: 'Course Administration',
+                certification: 'RightSkills Officer Certificate',
+                experience: 'System Admin',
+                professionalDevelopment: 'Active',
+                certificationValidity: '2030-12-31',
+                enrolledCourse: 'N/A',
                 moduleHours: 0,
-                notStarted: true,
+                notStarted: false,
                 inProgress: false,
-                completed: false
+                completed: true
             }
         });
     });
@@ -117,14 +129,23 @@ function registerPlaceholderRoutes() {
         const { email, password } = req.body || {};
         const normalizedEmail = (email || '').trim().toLowerCase();
         const normalizedPassword = (password || '').trim();
-        if (normalizedEmail !== tempUser.email || normalizedPassword !== tempPassword) {
+
+        let authenticatedUser = null;
+
+        if (normalizedEmail === officerUser.email.toLowerCase() && normalizedPassword === officerPassword) {
+            authenticatedUser = officerUser;
+        } else if (normalizedEmail === tempUser.email.toLowerCase() && normalizedPassword === tempPassword) {
+            authenticatedUser = tempUser;
+        }
+
+        if (!authenticatedUser) {
             return res.status(400).json({ message: 'Email or password wrong.' });
         }
 
         const secret = process.env.APP_SECRET || 'placeholder-secret';
         const expiresIn = process.env.TOKEN_EXPIRES_IN || '1d';
-        const accessToken = sign({ user: tempUser }, secret, { expiresIn });
-        return res.json({ accessToken, user: tempUser });
+        const accessToken = sign({ user: authenticatedUser }, secret, { expiresIn });
+        return res.json({ accessToken, user: authenticatedUser });
     });
 
     app.post('/user/register', (req, res) => {
