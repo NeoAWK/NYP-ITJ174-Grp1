@@ -1,12 +1,14 @@
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
+const path = require('path');
 const { sign } = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 let backendMode = 'database';
 
 // Enable CORS
@@ -26,11 +28,9 @@ app.get('/system/mode', (req, res) => {
 const port = process.env.APP_PORT || 3001;
 
 function registerDatabaseRoutes() {
-    const tutorialRoute = require('./routes/tutorial');
     const userRoute = require('./routes/user');
     const fileRoute = require('./routes/file');
 
-    app.use('/tutorial', tutorialRoute);
     app.use('/user', userRoute);
     app.use('/file', fileRoute);
 }
@@ -58,41 +58,6 @@ function registerPlaceholderRoutes() {
         usertype: 'RightSkills'
     };
     const officerPassword = 'test123';
-
-    const placeholderTutorials = [
-        {
-            id: 1,
-            title: 'Backend Placeholder Learning Content',
-            description: 'This is sample content shown while backend database setup is disabled.',
-            createdAt: new Date().toISOString(),
-            user: { name: 'System Placeholder' }
-        }
-    ];
-
-    app.get('/tutorial', (req, res) => {
-        res.json(placeholderTutorials);
-    });
-
-    app.get('/tutorial/:id', (req, res) => {
-        const id = parseInt(req.params.id, 10);
-        const tutorial = placeholderTutorials.find((item) => item.id === id);
-        if (!tutorial) {
-            return res.status(404).json({ message: 'Placeholder content item not found.' });
-        }
-        return res.json(tutorial);
-    });
-
-    app.post('/tutorial', (req, res) => {
-        res.status(503).json({ message: 'Content creation is unavailable in placeholder backend mode.' });
-    });
-
-    app.put('/tutorial/:id', (req, res) => {
-        res.status(503).json({ message: 'Content editing is unavailable in placeholder backend mode.' });
-    });
-
-    app.delete('/tutorial/:id', (req, res) => {
-        res.status(503).json({ message: 'Content deletion is unavailable in placeholder backend mode.' });
-    });
 
     app.get('/user/auth', (req, res) => {
         res.json({ user: officerUser });
@@ -171,27 +136,118 @@ function startServer() {
     });
 }
 
-const hasDbConfig = ['DB_NAME', 'DB_USER', 'DB_PWD', 'DB_HOST', 'DB_PORT']
-    .every((key) => Boolean(process.env[key]));
+async function ensureAdminAccount(db) {
+    const adminDetails = {
+        id: 2000,
+        name: 'Admin Account',
+        email: 'admin123@abc.com',
+        password: 'P@ssw0rd',
+        isVerified: true,
+        usertype: 'RightSkills'
+    };
+    const passwordHash = await bcrypt.hash(adminDetails.password, 10);
+    const [admin, created] = await db.User.findOrCreate({
+        where: { id: adminDetails.id },
+        defaults: { ...adminDetails, password: passwordHash }
+    });
 
-if (!hasDbConfig) {
-    backendMode = 'placeholder';
-    console.warn('DB config missing. Starting server without database setup.');
-    registerPlaceholderRoutes();
-    startServer();
-} else {
-    const db = require('./models');
-    db.sequelize.sync({ alter: true })
-        .then(() => {
-            backendMode = 'database';
-            registerDatabaseRoutes();
-            startServer();
-        })
-        .catch((err) => {
-            backendMode = 'placeholder';
-            console.error('Database connection failed. Starting server without database setup.');
-            console.error(err);
-            registerPlaceholderRoutes();
-            startServer();
+    if (!created) {
+        await admin.update({
+            name: adminDetails.name,
+            email: adminDetails.email,
+            password: passwordHash,
+            isVerified: adminDetails.isVerified,
+            usertype: adminDetails.usertype
         });
+    }
+
+    console.log(`Admin account ${created ? 'created' : 'verified'}: ID ${adminDetails.id}`);
 }
+
+async function ensureTestTrainerAccount(db) {
+    const trainerDetails = {
+        id: 2001,
+        name: 'Test Trainer',
+        email: 'test.trainer@rightskills.local',
+        password: 'TrainerPass123!',
+        isVerified: true,
+        usertype: 'Trainer'
+    };
+    const passwordHash = await bcrypt.hash(trainerDetails.password, 10);
+    const [trainer, created] = await db.User.findOrCreate({
+        where: { id: trainerDetails.id },
+        defaults: { ...trainerDetails, password: passwordHash }
+    });
+
+    if (!created) {
+        await trainer.update({
+            name: trainerDetails.name,
+            email: trainerDetails.email,
+            password: passwordHash,
+            isVerified: trainerDetails.isVerified,
+            usertype: trainerDetails.usertype
+        });
+    }
+
+    await db.TrainerProfile.findOrCreate({
+        where: { userId: trainerDetails.id },
+        defaults: {
+            userId: trainerDetails.id,
+            qualifications: 'Diploma in Applied Learning and Development',
+            certification: 'Certified Workplace Trainer',
+            experience: 'Three years delivering technical and workplace skills training.',
+            professionalDevelopment: 'Annual trainer development programme',
+            certificationValidity: '2028-12-31'
+        }
+    });
+
+    console.log(`Test trainer account ${created ? 'created' : 'verified'}: ID ${trainerDetails.id}`);
+}
+
+async function ensureTrainerProfileColumns(db) {
+    if (db.sequelize.getDialect() !== 'sqlite') {
+        return;
+    }
+
+    const [columns] = await db.sequelize.query('PRAGMA table_info(trainer_profiles)');
+    const existingColumns = new Set(columns.map((column) => column.name));
+    const additions = [
+        ['experienceEntries', 'TEXT'],
+        ['certificateFile', 'VARCHAR(255)'],
+        ['certificateFiles', 'TEXT']
+    ];
+
+    for (const [name, type] of additions) {
+        if (!existingColumns.has(name)) {
+            await db.sequelize.query(`ALTER TABLE trainer_profiles ADD COLUMN ${name} ${type}`);
+        }
+    }
+}
+
+const db = require('./models');
+const syncOptions = db.sequelize.getDialect() === 'sqlite' ? {} : { alter: true };
+db.sequelize.sync(syncOptions)
+    .then(() => {
+        backendMode = 'database';
+        if (db.sequelize.getDialect() === 'sqlite') {
+            console.log(`SQLite database ready at ${db.sequelize.options.storage}`);
+        }
+        return ensureAdminAccount(db);
+    })
+    .then(() => {
+        return ensureTrainerProfileColumns(db);
+    })
+    .then(() => {
+        return ensureTestTrainerAccount(db);
+    })
+    .then(() => {
+        registerDatabaseRoutes();
+        startServer();
+    })
+    .catch((err) => {
+        backendMode = 'placeholder';
+        console.error('Database connection failed. Starting server without database setup.');
+        console.error(err);
+        registerPlaceholderRoutes();
+        startServer();
+    });

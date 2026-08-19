@@ -6,7 +6,7 @@ RightSkills training ecosystem prototype with a React client and Express server.
 
 ### Platform and Runtime
 
-- Added fallback placeholder backend mode when MySQL is not configured or connection fails.
+- Added fallback placeholder backend mode when database connection fails.
 - Added mode endpoint for frontend awareness:
 	- GET /system/mode
 - Added temporary placeholder login account for non-DB testing:
@@ -16,12 +16,12 @@ RightSkills training ecosystem prototype with a React client and Express server.
 ### Frontend Functional Changes
 
 - Updated top navigation and routes to align with registration-first flow.
-- Added External Lecturer Profile page with placeholder-only behavior:
+- Added External Trainer Profile page with placeholder-only behavior:
 	- Certificate upload validation (PDF, PNG, JPEG, max 5MB)
 	- Visual certificate gallery updates
 	- Success/error notifications
 	- Professional experience form and chronological timeline
-- Added Full-time Lecturer Dashboard and drill-down detail pages using placeholders:
+- Added Full-time Trainer Dashboard and drill-down detail pages using placeholders:
 	- Clean assigned-course summary layout
 	- Per-course status and progress visibility
 	- Multi-course card organization
@@ -44,7 +44,7 @@ RightSkills training ecosystem prototype with a React client and Express server.
 ## Tech Stack
 
 - Client: React, Vite, MUI, Formik, Yup, React Toastify
-- Server: Express, Sequelize, MySQL2, JWT, Multer
+- Server: Express, Sequelize, SQLite (default), MySQL2 (optional), JWT, Multer
 
 ## Repository Layout
 
@@ -56,7 +56,8 @@ RightSkills training ecosystem prototype with a React client and Express server.
 
 - Node.js 18+ recommended
 - npm
-- Optional for full DB mode: MySQL server
+- No extra DB setup required for default mode (SQLite file-based database)
+- Optional for MySQL mode: MySQL server
 
 ## Environment Files
 
@@ -70,7 +71,7 @@ Current defaults:
 - Client API base URL points to http://localhost:3001
 - Client file base URL points to http://localhost:3001/uploads/
 - Server port is 3001
-- DB values are placeholders by default and will typically trigger placeholder mode unless you provide valid credentials
+- Server uses SQLite by default with DB_DIALECT=sqlite and SQLITE_STORAGE=./data/rightskills.sqlite
 
 ## How To Start The Services
 
@@ -101,8 +102,8 @@ npm start
 
 Expected behaviors:
 
-- With valid DB credentials: server starts in database mode.
-- Without valid DB credentials: server starts in placeholder mode and still serves API routes needed for demo flows.
+- With default SQLite config: server starts in database mode and creates/uses server/data/rightskills.sqlite.
+- If database initialization fails: server starts in placeholder mode and still serves API routes needed for demo flows.
 
 Backend URL:
 
@@ -133,9 +134,9 @@ Use this account when backend runs without DB setup:
 
 - / : landing
 - /registration : ecosystem registration landing
-- /lecturer-profile : external lecturer profile editor
-- /lecturer-dashboard : full-time lecturer dashboard
-- /lecturer-dashboard/:id : course detail breakdown
+- /trainer-profile : external trainer profile editor
+- /trainer-dashboard : full-time trainer dashboard
+- /trainer-dashboard/:id : course detail breakdown
 
 ## API Notes
 

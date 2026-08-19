@@ -16,9 +16,9 @@ import {
     Typography
 } from '@mui/material';
 import UserContext from '../contexts/UserContext';
-import { getCourseById } from '../data/lecturerCourses';
+import { getCourseById } from '../data/trainerCourses';
 
-function LecturerCourseDetail() {
+function TrainerCourseDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useContext(UserContext);
@@ -43,7 +43,7 @@ function LecturerCourseDetail() {
                 <Alert severity="error" sx={{ mb: 2 }}>
                     Course not found.
                 </Alert>
-                <Button variant="contained" onClick={() => navigate('/lecturer-dashboard')}>
+                <Button variant="contained" onClick={() => navigate('/trainer-dashboard')}>
                     Back to Dashboard
                 </Button>
             </Box>
@@ -106,11 +106,11 @@ function LecturerCourseDetail() {
                 </CardContent>
             </Card>
 
-            <Button sx={{ mt: 3 }} variant="outlined" onClick={() => navigate('/lecturer-dashboard')}>
+            <Button sx={{ mt: 3 }} variant="outlined" onClick={() => navigate('/trainer-dashboard')}>
                 Back to Dashboard
             </Button>
         </Box>
     );
 }
 
-export default LecturerCourseDetail;
+export default TrainerCourseDetail;

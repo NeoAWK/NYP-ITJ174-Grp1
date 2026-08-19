@@ -23,7 +23,7 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import CloseIcon from '@mui/icons-material/Close';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import MarkEmailReadOutlinedIcon from '@mui/icons-material/MarkEmailReadOutlined';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 import MyForm from './pages/MyForm';
@@ -37,9 +37,9 @@ import RightSkillsLanding from './pages/RightSkillsLanding';
 import RegisterProvider from './pages/RegisterProvider';
 import RegisterTrainer from './pages/RegisterTrainer';
 import RegisterLearner from './pages/RegisterLearner';
-import LecturerProfile from './pages/LecturerProfile';
-import LecturerDashboard from './pages/LecturerDashboard';
-import LecturerCourseDetail from './pages/LecturerCourseDetail';
+import TrainerProfile from './pages/TrainerProfile';
+import TrainerDashboard from './pages/TrainerDashboard';
+import TrainerCourseDetail from './pages/TrainerCourseDetail';
 import OfficerDashboard from './pages/OfficerDashboard';
 import OfficerNotifications from './pages/OfficerNotifications';
 import CourseApplicationEditor from './pages/CourseApplicationEditor';
@@ -58,6 +58,7 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const isOfficer = Boolean(user && user.email === 'admin123@abc.com');
+  const isTrainer = Boolean(user && user.usertype === 'Trainer');
 
   const handleNotificationClick = (event) => setAnchorEl(event.currentTarget);
   const handleNotificationClose = () => setAnchorEl(null);
@@ -73,8 +74,8 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
     <AppBar 
       position="sticky" 
       sx={{ 
-        // Color is blue (#1976d2) if RightSkills Officer, and green (#2e7d32) for everyone else
-        backgroundColor: isOfficer ? '#1976d2' : '#2e7d32', 
+        // Color is blue for officers, purple for trainers, and green for other users.
+        backgroundColor: isOfficer ? '#1976d2' : isTrainer ? '#7b1fa2' : '#2e7d32', 
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)', 
         zIndex: (theme) => theme.zIndex.drawer + 1,
         transition: 'background-color 0.3s ease'
@@ -93,14 +94,8 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
           {/* Regular User / Non-Officer Navigation */}
           {!isOfficer && (
             <Box sx={{ display: 'flex', gap: 3 }}>
-              <Link to="/registration" style={{ color: 'white', textDecoration: 'none' }}>
-                <Typography fontWeight="500">Registration</Typography>
-              </Link>
-              <Link to="/lecturer-profile" style={{ color: 'white', textDecoration: 'none' }}>
-                <Typography fontWeight="500">Lecturer Profile</Typography>
-              </Link>
-              <Link to="/lecturer-dashboard" style={{ color: 'white', textDecoration: 'none' }}>
-                <Typography fontWeight="500">Lecturer Dashboard</Typography>
+              <Link to="/trainer-profile-overview" style={{ color: 'white', textDecoration: 'none' }}>
+                <Typography fontWeight="500">Trainer Profile</Typography>
               </Link>
             </Box>
           )}
@@ -338,14 +333,23 @@ function App() {
                 )}
 
                 <Routes>
-                  <Route path={"/"} element={isOfficer ? <OfficerDashboard onAddNotification={handleAddNotification} /> : <RightSkillsLanding />} />
-                  <Route path={"/registration"} element={<RightSkillsLanding />} />
-                  <Route path={"/register-provider"} element={<RegisterProvider />} />
-                  <Route path={"/register-trainer"} element={<RegisterTrainer />} />
-                  <Route path={"/register-learner"} element={<RegisterLearner />} />
-                  <Route path={"/lecturer-profile"} element={<LecturerProfile />} />
-                  <Route path={"/lecturer-dashboard"} element={<LecturerDashboard />} />
-                  <Route path={"/lecturer-dashboard/:id"} element={<LecturerCourseDetail />} />
+                  <Route
+                    path="/"
+                    element={
+                      isOfficer
+                        ? <OfficerDashboard onAddNotification={handleAddNotification} />
+                        : user?.usertype === 'Trainer'
+                          ? <TrainerDashboard />
+                          : <RightSkillsLanding />
+                    }
+                  />
+                  <Route path={"/register-provider"} element={user?.usertype === 'Trainer' ? <Navigate to="/" replace /> : <RegisterProvider />} />
+                  <Route path={"/register-trainer"} element={user?.usertype === 'Trainer' ? <Navigate to="/" replace /> : <RegisterTrainer />} />
+                  <Route path={"/register-learner"} element={user?.usertype === 'Trainer' ? <Navigate to="/" replace /> : <RegisterLearner />} />
+                  <Route path={"/trainer-profile"} element={<TrainerProfile />} />
+                  <Route path={"/trainer-profile-overview"} element={<TrainerProfile />} />
+                  <Route path={"/trainer-dashboard"} element={<TrainerDashboard />} />
+                  <Route path={"/trainer-dashboard/:id"} element={<TrainerCourseDetail />} />
                   <Route path={"/officer-dashboard"} element={<OfficerDashboard onAddNotification={handleAddNotification} />} />
                   <Route path={"/officer-notifications"} element={<OfficerNotifications notifications={notifications} />} />
                   <Route path={"/officer-course-form"} element={<CourseApplicationEditor />} />

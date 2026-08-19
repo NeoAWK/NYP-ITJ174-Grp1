@@ -29,11 +29,14 @@ function Profile() {
         enableReinitialize: true,
         validationSchema: yup.object({
             mobileNo: yup.string().trim()
+                .transform((value, originalValue) => originalValue === '' ? null : value)
+                .nullable()
                 .matches(/^[0-9]+$/, "Only numbers are allowed")
                 .min(8, 'Mobile number must be at least 8 characters')
                 .max(15, 'Mobile number must be at most 15 characters')
         }),
         onSubmit: async (data) => {
+            let uploadedFilename = null;
             try {
                 let profilePicture = user.profilePicture;
 
@@ -45,11 +48,12 @@ function Profile() {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
                     profilePicture = uploadRes.data.filename;
+                    uploadedFilename = profilePicture;
                 }
 
                 // 2. Update Profile Data
                 const updateData = {
-                    mobileNo: data.mobileNo.trim(),
+                    mobileNo: data.mobileNo.trim() || null,
                     profilePicture: profilePicture
                 };
 
@@ -60,12 +64,15 @@ function Profile() {
                 
                 toast.success("Profile updated successfully!");
 
-                // 3. Redirect to Home (Tutorials) after a short delay
+                // 3. Redirect to Home after a short delay
                 setTimeout(() => {
                     navigate("/");
                 }, 1500);
 
             } catch (err) {
+                if (uploadedFilename) {
+                    await http.delete(`/file/upload/${encodeURIComponent(uploadedFilename)}`).catch(() => {});
+                }
                 toast.error(err.response?.data?.message || "An error occurred during update.");
             }
         }

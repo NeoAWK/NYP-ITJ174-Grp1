@@ -8,17 +8,31 @@ const basename = path.basename(__filename);
 const db = {};
 require('dotenv').config();
 
-// Create sequelize instance using config 
-let sequelize = new Sequelize(
-  process.env.DB_NAME, process.env.DB_USER, process.env.DB_PWD,
-  {
+const configuredDialect = (process.env.DB_DIALECT || 'sqlite').toLowerCase();
+let sequelize;
+
+if (configuredDialect === 'sqlite') {
+  const sqliteStorage = process.env.SQLITE_STORAGE || path.join(__dirname, '..', 'data', 'rightskills.sqlite');
+  fs.mkdirSync(path.dirname(sqliteStorage), { recursive: true });
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: sqliteStorage,
+    logging: false
+  });
+} else {
+  sequelize = new Sequelize(
+    process.env.DB_NAME,
+    process.env.DB_USER,
+    process.env.DB_PWD,
+    {
       host: process.env.DB_HOST,
       port: process.env.DB_PORT,
-      dialect: 'mysql',
+      dialect: configuredDialect,
       logging: false,
       timezone: '+08:00'
-  }
-);
+    }
+  );
+}
 
 fs
   .readdirSync(__dirname)

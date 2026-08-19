@@ -117,7 +117,12 @@ router.get("/auth", validateToken, async (req, res) => {
 router.put("/update", validateToken, async (req, res) => {
     let data = req.body;
     let validationSchema = yup.object({
-        mobileNo: yup.string().trim().matches(/^[0-9]+$/, "Only numbers allowed").min(8).max(15).nullable()
+        mobileNo: yup.string().trim()
+            .transform((value, originalValue) => originalValue === '' ? null : value)
+            .nullable()
+            .matches(/^[0-9]+$/, "Only numbers allowed")
+            .min(8)
+            .max(15)
     });
     try {
         data = await validationSchema.validate(data, { abortEarly: false });

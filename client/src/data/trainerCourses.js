@@ -1,9 +1,9 @@
-export const lecturerCoursePlaceholders = [
+export const trainerCoursePlaceholders = [
     {
         id: 'CS101',
         title: 'Programming Fundamentals',
         code: 'CS101',
-        assignedRole: 'Full-time Polytechnic lecturer',
+        assignedRole: 'Full-time Polytechnic trainer',
         progressPercent: 72,
         milestonesHit: 9,
         totalMilestones: 12,
@@ -21,7 +21,7 @@ export const lecturerCoursePlaceholders = [
         id: 'CS204',
         title: 'Database Systems',
         code: 'CS204',
-        assignedRole: 'Full-time Polytechnic lecturer',
+        assignedRole: 'Full-time Polytechnic trainer',
         progressPercent: 48,
         milestonesHit: 5,
         totalMilestones: 10,
@@ -39,7 +39,7 @@ export const lecturerCoursePlaceholders = [
         id: 'CS315',
         title: 'Applied Web Engineering',
         code: 'CS315',
-        assignedRole: 'Full-time Polytechnic lecturer',
+        assignedRole: 'Full-time Polytechnic trainer',
         progressPercent: 86,
         milestonesHit: 12,
         totalMilestones: 14,
@@ -55,11 +55,11 @@ export const lecturerCoursePlaceholders = [
     }
 ];
 
-export function getCoursesForLecturer(user) {
-    // Placeholder mode: show a clean assigned-course set for the lecturer dashboard.
-    return lecturerCoursePlaceholders;
+export function getCoursesForTrainer(user) {
+    // Placeholder mode: show a clean assigned-course set for the trainer dashboard.
+    return trainerCoursePlaceholders;
 }
 
 export function getCourseById(id) {
-    return lecturerCoursePlaceholders.find((course) => course.id === id) || null;
+    return trainerCoursePlaceholders.find((course) => course.id === id) || null;
 }

@@ -218,7 +218,7 @@ function MyForm() {
                             {
                                 imageFile && (
                                     <Box className="aspect-ratio-container" sx={{ mt: 2 }}>
-                                        <img alt="tutorial"
+                                        <img alt="content image"
                                             src={`${import.meta.env.VITE_FILE_BASE_URL}${imageFile}`}>
                                         </img>
                                     </Box>

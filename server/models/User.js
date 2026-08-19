@@ -44,12 +44,6 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     User.associate = (models) => {
-        // Link to existing tutorials table
-        User.hasMany(models.Tutorial, {
-            foreignKey: "userId",
-            onDelete: "cascade"
-        });
-
         // Requirement 4, 5, 6: Establish relationships to new sub-profile ecosystem tables using the User ID
         if (models.TrainingProvider) {
             User.hasOne(models.TrainingProvider, { foreignKey: "userId", as: "providerProfile", onDelete: "cascade" });

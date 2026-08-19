@@ -14,7 +14,7 @@ import {
     Typography
 } from '@mui/material';
 import UserContext from '../contexts/UserContext';
-import { getCoursesForLecturer } from '../data/lecturerCourses';
+import { getCoursesForTrainer } from '../data/trainerCourses';
 
 function getCourseStatus(progressPercent) {
     if (progressPercent >= 100) {
@@ -26,7 +26,7 @@ function getCourseStatus(progressPercent) {
     return { label: 'Not Started', color: 'default' };
 }
 
-function LecturerDashboard() {
+function TrainerDashboard() {
     const { user } = useContext(UserContext);
     const navigate = useNavigate();
 
@@ -34,7 +34,7 @@ function LecturerDashboard() {
         return (
             <Box sx={{ mt: 5 }}>
                 <Alert severity="warning" sx={{ mb: 2 }}>
-                    Please log in to access the lecturer dashboard.
+                    Please log in to access the trainer dashboard.
                 </Alert>
                 <Button variant="contained" onClick={() => navigate('/login')}>
                     Go to Login
@@ -43,12 +43,12 @@ function LecturerDashboard() {
         );
     }
 
-    const assignedCourses = getCoursesForLecturer(user);
+    const assignedCourses = getCoursesForTrainer(user);
 
     return (
         <Box sx={{ mt: 4, mb: 6 }}>
             <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                Full-time Lecturer Dashboard
+                Trainer Dashboard
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
                 Dedicated summary view showing assigned courses only. Data is placeholder-based in this prototype.
@@ -101,7 +101,7 @@ function LecturerDashboard() {
                             </CardContent>
 
                             <CardActions sx={{ mt: 'auto', px: 2, pb: 2 }}>
-                                <Button fullWidth variant="contained" onClick={() => navigate(`/lecturer-dashboard/${course.id}`)}>
+                                <Button fullWidth variant="contained" onClick={() => navigate(`/trainer-dashboard/${course.id}`)}>
                                     View Detailed Breakdown
                                 </Button>
                             </CardActions>
@@ -115,4 +115,4 @@ function LecturerDashboard() {
     );
 }
 
-export default LecturerDashboard;
+export default TrainerDashboard;
