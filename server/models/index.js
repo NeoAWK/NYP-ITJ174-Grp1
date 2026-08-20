@@ -34,14 +34,25 @@ if (configuredDialect === 'sqlite') {
   );
 }
 
-fs
-  .readdirSync(__dirname)
+// Safely filter and load ONLY Sequelize model definitions
+fs.readdirSync(__dirname)
   .filter(file => {
-    return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
+    return (
+      file.indexOf('.') !== 0 &&
+      file !== basename &&
+      file.slice(-3) === '.js' &&
+      !file.toLowerCase().includes('route') &&
+      !file.toLowerCase().includes('controller')
+    );
   })
   .forEach(file => {
-    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
-    db[model.name] = model;
+    const modelModule = require(path.join(__dirname, file));
+    if (typeof modelModule === 'function') {
+      const model = modelModule(sequelize, Sequelize.DataTypes);
+      if (model && model.name) {
+        db[model.name] = model;
+      }
+    }
   });
 
 Object.keys(db).forEach(modelName => {
@@ -49,6 +60,12 @@ Object.keys(db).forEach(modelName => {
     db[modelName].associate(db);
   }
 });
+
+// Define core relationships safely
+if (db.Course && db.Module) {
+  db.Course.hasMany(db.Module, { foreignKey: 'CourseID', onDelete: 'CASCADE' });
+  db.Module.belongsTo(db.Course, { foreignKey: 'CourseID' });
+}
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

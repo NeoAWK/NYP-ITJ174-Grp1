@@ -43,6 +43,7 @@ import TrainerCourseDetail from './pages/TrainerCourseDetail';
 import OfficerDashboard from './pages/OfficerDashboard';
 import OfficerNotifications from './pages/OfficerNotifications';
 import CourseApplicationEditor from './pages/CourseApplicationEditor';
+import AdminAuditLog from './pages/AdminAuditLog';
 
 const defaultTheme = createTheme();
 
@@ -102,7 +103,7 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
 
           {/* Officer Navigation */}
           {isOfficer && (
-            <Box sx={{ display: 'flex', gap: 3 }}>
+            <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               <Link to="/officer-dashboard" style={{ textDecoration: 'none', color: 'white' }}>
                 <Typography fontWeight="500">Dashboard</Typography>
               </Link>
@@ -111,6 +112,9 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
               </Link>
               <Link to="/officer-course-form" style={{ textDecoration: 'none', color: 'white' }}>
                 <Typography fontWeight="500">Course Application Form</Typography>
+              </Link>
+              <Link to="/admin-history" style={{ textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Typography fontWeight="500">History Log</Typography>
               </Link>
             </Box>
           )}
@@ -353,6 +357,7 @@ function App() {
                   <Route path={"/officer-dashboard"} element={<OfficerDashboard onAddNotification={handleAddNotification} />} />
                   <Route path={"/officer-notifications"} element={<OfficerNotifications notifications={notifications} />} />
                   <Route path={"/officer-course-form"} element={<CourseApplicationEditor />} />
+                  <Route path={"/admin-history"} element={<AdminAuditLog />} />
                   <Route path={"/register"} element={<Register />} />
                   <Route path={"/login"} element={<Login />} />
                   <Route path={"/form"} element={<MyForm />} />

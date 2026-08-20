@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -22,7 +22,8 @@ import {
   IconButton,
   Alert,
   Menu,
-  MenuItem
+  MenuItem,
+  CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -35,6 +36,9 @@ import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import CloseIcon from '@mui/icons-material/Close';
 import HighlightOffOutlinedIcon from '@mui/icons-material/HighlightOffOutlined';
 
+// Express Backend Base URL
+const API_BASE_URL = 'http://localhost:3001';
+
 const initialData = [
   { id: 'RS-2026-001', title: 'Advanced Data Analytics with Python', level: 'Advanced', provider: 'TechLearn Academy', category: 'Data Science', duration: '40 hours', submitted: '14 Jul 2026', fee: 2500, status: 'Pending Review' },
   { id: 'RS-2026-002', title: 'Workplace Health & Safety Fundamentals', level: 'Foundation', provider: 'SafeWork Training Ltd', category: 'Health & Safety', duration: '16 hours', submitted: '11 Jul 2026', fee: 850, status: 'Pending Review' },
@@ -44,37 +48,96 @@ const initialData = [
 ];
 
 function OfficerDashboard({ onAddNotification }) {
-  const [courses, setCourses] = useState(initialData);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filter Menu State
   const [anchorEl, setAnchorEl] = useState(null);
-  const [sortOption, setSortOption] = useState('newest'); // 'newest', 'oldest', 'fee-low-high', 'fee-high-low'
+  const [sortOption, setSortOption] = useState('newest');
 
-  const handleOpenFilterMenu = (event) => {
-    setAnchorEl(event.currentTarget);
+  // Rejection Modal State
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [reasonError, setReasonError] = useState(false);
+  const [emailNotification, setEmailNotification] = useState(null);
+
+  // Fetch course data with safe normalization
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/courses`);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const data = await res.json();
+
+      if (data && data.length > 0) {
+        const normalizedData = data.map((item) => {
+          let statusVal = item.status || item.SubmissionStatus || 'Pending Review';
+          if (statusVal === 'Pending') statusVal = 'Pending Review';
+
+          return {
+            id: item.id || item.CourseID || 'N/A',
+            rawId: item.rawId || item.id,
+            title: item.title || item.CourseTitle || 'Untitled Course',
+            level: item.level || item.CourseLevel || 'Foundation',
+            provider: item.provider || item.Provider || item.TrainingProvider || 'Training Provider',
+            category: item.category || item.Category || 'General',
+            duration: item.duration || item.Duration || 'N/A',
+            submitted: item.submitted || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '14 Jul 2026'),
+            fee: Number(item.fee ?? item.CourseFee ?? 0),
+            status: statusVal,
+          };
+        });
+        setCourses(normalizedData);
+      } else {
+        setCourses(initialData);
+      }
+    } catch (err) {
+      console.warn('Backend API unavailable. Loading local fallback data:', err);
+      setCourses(initialData);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCloseFilterMenu = () => {
-    setAnchorEl(null);
-  };
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const handleOpenFilterMenu = (event) => setAnchorEl(event.currentTarget);
+  const handleCloseFilterMenu = () => setAnchorEl(null);
 
   const handleSelectSort = (option) => {
     setSortOption(option);
     handleCloseFilterMenu();
   };
 
-  // Rejection State
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [reasonError, setReasonError] = useState(false);
-  const [emailNotification, setEmailNotification] = useState(null);
+  // Dynamic Approval Handler
+  const handleApproveCourse = async (course) => {
+    try {
+      const targetId = course.rawId || course.id;
+      await fetch(`${API_BASE_URL}/courses/${targetId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Approved' }),
+      });
 
-  const handleStatusChange = (id, newStatus) => {
-    setCourses((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
-    );
+      await fetch(`${API_BASE_URL}/admin/logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: 'admin123@abc.com',
+          action: 'COURSE_APPROVED',
+          targetEntity: `Course ID: ${course.id}`,
+          details: `Approved application for ${course.title}`
+        }),
+      });
+
+      await fetchCourses();
+    } catch (err) {
+      console.error('Failed to approve course:', err);
+    }
   };
 
   const handleOpenRejectModal = (course) => {
@@ -89,51 +152,73 @@ function OfficerDashboard({ onAddNotification }) {
     setReasonError(false);
   };
 
-  const handleConfirmRejection = () => {
+  // Dynamic Rejection Handler
+  const handleConfirmRejection = async () => {
     if (!rejectionReason.trim()) {
       setReasonError(true);
       return;
     }
 
-    // 1. Update submission status in table
-    handleStatusChange(selectedCourse.id, 'Rejected');
+    try {
+      const trimmedReason = rejectionReason.trim();
+      const targetId = selectedCourse.rawId || selectedCourse.id;
 
-    // 2. Format automated email
-    const uniqueEmailId = `MSG-${Math.floor(100000 + Math.random() * 900000)}`;
-    const emailSubject = `<Subject - Rejection of Course Application> <${uniqueEmailId}>`;
-    const emailBody = `Dear ${selectedCourse.provider}\n\nThe course, ${selectedCourse.title}, ${selectedCourse.id} has been rejected due to ${rejectionReason.trim()}. Please resubmit the course application with the updated information.\n\nIf you have any enquiry related to this, please reply on this email and our officers will get back to you as soon as possible, thank you.\n\nBest Regards\nRightSkills Officer`;
-
-    // 3. Set top banner preview on Dashboard
-    setEmailNotification({
-      subject: emailSubject,
-      body: emailBody,
-      provider: selectedCourse.provider
-    });
-
-    // 4. Send directly to global Inbox / Notifications state
-    if (onAddNotification) {
-      onAddNotification({
-        title: selectedCourse.title,
-        provider: selectedCourse.provider,
-        subject: emailSubject,
-        body: emailBody
+      await fetch(`${API_BASE_URL}/courses/${targetId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'Rejected',
+          rejectionReason: trimmedReason
+        }),
       });
-    }
 
-    handleCloseRejectModal();
+      await fetch(`${API_BASE_URL}/admin/logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: 'admin123@abc.com',
+          action: 'COURSE_REJECTED',
+          targetEntity: `Course ID: ${selectedCourse.id}`,
+          details: `Rejected application for ${selectedCourse.title}. Reason: ${trimmedReason}`
+        }),
+      });
+
+      const uniqueEmailId = `MSG-${Math.floor(100000 + Math.random() * 900000)}`;
+      const emailSubject = `<Subject - Rejection of Course Application> <${uniqueEmailId}>`;
+      const emailBody = `Dear ${selectedCourse.provider}\n\nThe course, ${selectedCourse.title}, ${selectedCourse.id} has been rejected due to ${trimmedReason}. Please resubmit the course application with the updated information.\n\nIf you have any enquiry related to this, please reply on this email and our officers will get back to you as soon as possible, thank you.\n\nBest Regards\nRightSkills Officer`;
+
+      setEmailNotification({
+        subject: emailSubject,
+        body: emailBody,
+        provider: selectedCourse.provider
+      });
+
+      if (onAddNotification) {
+        onAddNotification({
+          title: selectedCourse.title,
+          provider: selectedCourse.provider,
+          subject: emailSubject,
+          body: emailBody
+        });
+      }
+
+      await fetchCourses();
+      handleCloseRejectModal();
+    } catch (err) {
+      console.error('Failed to reject course:', err);
+    }
   };
 
   const pendingCount = courses.filter((c) => c.status === 'Pending Review').length;
   const approvedCount = courses.filter((c) => c.status === 'Approved').length;
   const rejectedCount = courses.filter((c) => c.status === 'Rejected').length;
 
-  // Filter and Sort Logic
   const filteredCourses = courses
     .filter((c) => {
       const matchesSearch =
-        c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.id.toLowerCase().includes(searchTerm.toLowerCase());
+        (c.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.provider || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.id || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesTab =
         activeTab === 'All' ||
@@ -144,27 +229,18 @@ function OfficerDashboard({ onAddNotification }) {
       return matchesSearch && matchesTab;
     })
     .sort((a, b) => {
-      if (sortOption === 'newest') {
-        return new Date(b.submitted) - new Date(a.submitted);
-      }
-      if (sortOption === 'oldest') {
-        return new Date(a.submitted) - new Date(b.submitted);
-      }
-      if (sortOption === 'fee-low-high') {
-        return a.fee - b.fee;
-      }
-      if (sortOption === 'fee-high-low') {
-        return b.fee - a.fee;
-      }
+      if (sortOption === 'newest') return new Date(b.submitted) - new Date(a.submitted);
+      if (sortOption === 'oldest') return new Date(a.submitted) - new Date(b.submitted);
+      if (sortOption === 'fee-low-high') return a.fee - b.fee;
+      if (sortOption === 'fee-high-low') return b.fee - a.fee;
       return 0;
     });
 
   return (
     <Box sx={{ pb: 4, flexGrow: 1 }}>
-      {/* Sent Email Preview Banner */}
       {emailNotification && (
-        <Alert 
-          severity="info" 
+        <Alert
+          severity="info"
           onClose={() => setEmailNotification(null)}
           sx={{ mb: 3, borderRadius: 2, border: '1px solid #bfdbfe' }}
         >
@@ -184,7 +260,6 @@ function OfficerDashboard({ onAddNotification }) {
         Course Submissions
       </Typography>
 
-      {/* Metrics Row */}
       <Box sx={{ display: 'flex', gap: 2.5, mb: 4, flexWrap: 'wrap' }}>
         <Card elevation={0} sx={{ flex: '1 1 200px', border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
@@ -227,7 +302,6 @@ function OfficerDashboard({ onAddNotification }) {
         </Card>
       </Box>
 
-      {/* Submissions Table */}
       <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
         <Box sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: 2 }}>
           <Box sx={{ display: 'flex', gap: 1, backgroundColor: '#f1f5f9', p: 0.5, borderRadius: 2 }}>
@@ -288,34 +362,10 @@ function OfficerDashboard({ onAddNotification }) {
                 sx: { borderRadius: 2, mt: 1, minWidth: 200 }
               }}
             >
-              <MenuItem
-                selected={sortOption === 'newest'}
-                onClick={() => handleSelectSort('newest')}
-                sx={{ fontSize: 13, fontWeight: sortOption === 'newest' ? 700 : 400 }}
-              >
-                Newest to Oldest
-              </MenuItem>
-              <MenuItem
-                selected={sortOption === 'oldest'}
-                onClick={() => handleSelectSort('oldest')}
-                sx={{ fontSize: 13, fontWeight: sortOption === 'oldest' ? 700 : 400 }}
-              >
-                Oldest to Newest
-              </MenuItem>
-              <MenuItem
-                selected={sortOption === 'fee-low-high'}
-                onClick={() => handleSelectSort('fee-low-high')}
-                sx={{ fontSize: 13, fontWeight: sortOption === 'fee-low-high' ? 700 : 400 }}
-              >
-                Lowest Fee to Highest Fee
-              </MenuItem>
-              <MenuItem
-                selected={sortOption === 'fee-high-low'}
-                onClick={() => handleSelectSort('fee-high-low')}
-                sx={{ fontSize: 13, fontWeight: sortOption === 'fee-high-low' ? 700 : 400 }}
-              >
-                Highest Fee to Lowest Fee
-              </MenuItem>
+              <MenuItem selected={sortOption === 'newest'} onClick={() => handleSelectSort('newest')} sx={{ fontSize: 13 }}>Newest to Oldest</MenuItem>
+              <MenuItem selected={sortOption === 'oldest'} onClick={() => handleSelectSort('oldest')} sx={{ fontSize: 13 }}>Oldest to Newest</MenuItem>
+              <MenuItem selected={sortOption === 'fee-low-high'} onClick={() => handleSelectSort('fee-low-high')} sx={{ fontSize: 13 }}>Lowest Fee to Highest Fee</MenuItem>
+              <MenuItem selected={sortOption === 'fee-high-low'} onClick={() => handleSelectSort('fee-high-low')} sx={{ fontSize: 13 }}>Highest Fee to Lowest Fee</MenuItem>
             </Menu>
           </Box>
         </Box>
@@ -336,51 +386,67 @@ function OfficerDashboard({ onAddNotification }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredCourses.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell sx={{ fontSize: 13, color: '#64748b', fontFamily: 'monospace' }}>{row.id}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight="600" color="#0f172a">{row.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">{row.level}</Typography>
-                  </TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.provider}</TableCell>
-                  <TableCell><Chip label={row.category} size="small" sx={{ backgroundColor: '#f1f5f9', fontWeight: 600, fontSize: 11 }} /></TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.duration}</TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.submitted}</TableCell>
-                  <TableCell sx={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>${row.fee.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={row.status}
-                      size="small"
-                      color={row.status === 'Approved' ? 'success' : row.status === 'Rejected' ? 'error' : 'warning'}
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    {row.status === 'Pending Review' ? (
-                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          color="success"
-                          startIcon={<CheckCircleOutlineIcon />}
-                          onClick={() => handleStatusChange(row.id, 'Approved')}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          color="error"
-                          startIcon={<HighlightOffIcon />}
-                          onClick={() => handleOpenRejectModal(row)}
-                        >
-                          Reject
-                        </Button>
-                      </Box>
-                    ) : '—'}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : filteredCourses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 4, color: '#64748b' }}>
+                    No course submissions found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredCourses.map((row) => (
+                  <TableRow key={row.id} hover>
+                    <TableCell sx={{ fontSize: 13, color: '#64748b', fontFamily: 'monospace' }}>{row.id}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="600" color="#0f172a">{row.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">{row.level}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>{row.provider}</TableCell>
+                    <TableCell><Chip label={row.category} size="small" sx={{ backgroundColor: '#f1f5f9', fontWeight: 600, fontSize: 11 }} /></TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>{row.duration}</TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>{row.submitted}</TableCell>
+                    <TableCell sx={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
+                      ${Number(row.fee || 0).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={row.status}
+                        size="small"
+                        color={row.status === 'Approved' ? 'success' : row.status === 'Rejected' ? 'error' : 'warning'}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      {row.status === 'Pending Review' ? (
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="success"
+                            startIcon={<CheckCircleOutlineIcon />}
+                            onClick={() => handleApproveCourse(row)}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            startIcon={<HighlightOffIcon />}
+                            onClick={() => handleOpenRejectModal(row)}
+                          >
+                            Reject
+                          </Button>
+                        </Box>
+                      ) : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -415,15 +481,9 @@ function OfficerDashboard({ onAddNotification }) {
 
         <DialogContent sx={{ pt: 1 }}>
           <Paper elevation={0} sx={{ backgroundColor: '#eef2ff', p: 2, borderRadius: 2, mb: 2.5 }}>
-            <Typography variant="caption" color="text.secondary" display="block">
-              Course
-            </Typography>
-            <Typography variant="subtitle2" fontWeight="700" color="#1e293b">
-              {selectedCourse?.title}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {selectedCourse?.provider}
-            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">Course</Typography>
+            <Typography variant="subtitle2" fontWeight="700" color="#1e293b">{selectedCourse?.title}</Typography>
+            <Typography variant="caption" color="text.secondary">{selectedCourse?.provider}</Typography>
           </Paper>
 
           <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>
@@ -441,33 +501,15 @@ function OfficerDashboard({ onAddNotification }) {
             }}
             error={reasonError}
             helperText={reasonError ? 'A reason is required to reject this submission.' : ''}
-            sx={{
-              backgroundColor: '#f8fafc',
-              borderRadius: 2,
-              '& .MuiOutlinedInput-root': { borderRadius: 2 }
-            }}
+            sx={{ backgroundColor: '#f8fafc', borderRadius: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
-
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            This reason will be automatically emailed to the training provider.
-          </Typography>
         </DialogContent>
 
         <DialogActions sx={{ p: 2, pt: 1, gap: 1 }}>
-          <Button
-            variant="outlined"
-            onClick={handleCloseRejectModal}
-            sx={{ textTransform: 'none', borderRadius: 2, px: 2.5, borderColor: '#e2e8f0', color: '#334155' }}
-          >
+          <Button variant="outlined" onClick={handleCloseRejectModal} sx={{ textTransform: 'none', borderRadius: 2, px: 2.5 }}>
             Cancel
           </Button>
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<HighlightOffIcon />}
-            onClick={handleConfirmRejection}
-            sx={{ textTransform: 'none', borderRadius: 2, px: 2.5, backgroundColor: '#dc2626', fontWeight: '600' }}
-          >
+          <Button variant="contained" color="error" startIcon={<HighlightOffIcon />} onClick={handleConfirmRejection} sx={{ textTransform: 'none', borderRadius: 2, px: 2.5, backgroundColor: '#dc2626', fontWeight: '600' }}>
             Confirm Rejection
           </Button>
         </DialogActions>
