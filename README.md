@@ -128,7 +128,7 @@ Use this account when backend runs without DB setup:
 - Password: TempPass123!
 
 - Email for RS Officer: admin123@abc.com
-- Password: test123
+- Password: P@ssw0rd
 
 ## Main Routes (Client)
 

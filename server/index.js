@@ -57,7 +57,7 @@ function registerPlaceholderRoutes() {
         profilePicture: null,
         usertype: 'RightSkills'
     };
-    const officerPassword = 'test123';
+    const officerPassword = 'P@ssw0rd';
 
     app.get('/user/auth', (req, res) => {
         res.json({ user: officerUser });
@@ -169,7 +169,7 @@ async function ensureTestTrainerAccount(db) {
         id: 2001,
         name: 'Test Trainer',
         email: 'test.trainer@rightskills.local',
-        password: 'TrainerPass123!',
+        password: 'P@ssw0rd',
         isVerified: true,
         usertype: 'Trainer'
     };
