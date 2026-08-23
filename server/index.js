@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const { sign } = require('jsonwebtoken');
 require('dotenv').config();
+const { cleanupNonPersistentUsers } = require('./utils/persistentUsers');
 
 const app = express();
 app.use(express.json());
@@ -26,6 +27,7 @@ app.get('/system/mode', (req, res) => {
 });
 
 const port = process.env.APP_PORT || 3001;
+const enforcePersistentUsersOnly = String(process.env.PERSISTENT_TEST_USERS_ONLY || 'false').toLowerCase() === 'true';
 
 function registerDatabaseRoutes() {
     const userRoute = require('./routes/user');
@@ -239,6 +241,14 @@ db.sequelize.sync(syncOptions)
     })
     .then(() => {
         return ensureTestTrainerAccount(db);
+    })
+    .then(async () => {
+        if (!enforcePersistentUsersOnly) {
+            return;
+        }
+
+        const cleanupResult = await cleanupNonPersistentUsers(db.User);
+        console.log(`Persistent test user mode: removed ${cleanupResult.deletedCount} non-persistent account(s).`);
     })
     .then(() => {
         registerDatabaseRoutes();

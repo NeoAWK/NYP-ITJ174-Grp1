@@ -91,8 +91,8 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
             </Typography>
           </Link>
 
-          {/* Regular User / Non-Officer Navigation */}
-          {!isOfficer && (
+          {/* Trainer Navigation */}
+          {user?.usertype === 'Trainer' && (
             <Box sx={{ display: 'flex', gap: 3 }}>
               <Link to="/trainer-profile-overview" style={{ color: 'white', textDecoration: 'none' }}>
                 <Typography fontWeight="500">Trainer Profile</Typography>
@@ -258,7 +258,10 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
                 LOGOUT
               </Button>
             ) : (
-              <Link to="/login" style={{ color: 'white', textDecoration: 'none', fontWeight: '500' }}>LOGIN</Link>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Link to="/register" style={{ color: 'white', textDecoration: 'none', fontWeight: '500' }}>REGISTER</Link>
+                <Link to="/login" style={{ color: 'white', textDecoration: 'none', fontWeight: '500' }}>LOGIN</Link>
+              </Box>
             )}
 
           </Box>

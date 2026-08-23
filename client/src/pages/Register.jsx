@@ -54,7 +54,12 @@ function Register() {
                     }, 2000);
                 })
                 .catch((err) => {
-                    toast.error(`${err.response.data.message}`);
+                    const message =
+                        err?.response?.data?.message ||
+                        err?.response?.data?.errors?.[0] ||
+                        'Registration failed';
+
+                    toast.error(message);
                 });
 
         }

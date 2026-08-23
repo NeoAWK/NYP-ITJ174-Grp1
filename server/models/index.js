@@ -12,7 +12,10 @@ const configuredDialect = (process.env.DB_DIALECT || 'sqlite').toLowerCase();
 let sequelize;
 
 if (configuredDialect === 'sqlite') {
-  const sqliteStorage = process.env.SQLITE_STORAGE || path.join(__dirname, '..', 'data', 'rightskills.sqlite');
+  const configuredStorage = process.env.SQLITE_STORAGE || path.join('data', 'rightskills.sqlite');
+  const sqliteStorage = path.isAbsolute(configuredStorage)
+    ? configuredStorage
+    : path.resolve(__dirname, '..', configuredStorage);
   fs.mkdirSync(path.dirname(sqliteStorage), { recursive: true });
   sequelize = new Sequelize({
     dialect: 'sqlite',

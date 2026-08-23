@@ -6,10 +6,13 @@ const { sign } = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { validateToken } = require('../middlewares/auth');
+const { cleanupNonPersistentUsers, ensurePersistentTestUsers } = require('../utils/persistentUsers');
 require('dotenv').config();
 
 // One single consolidated model import
 const { User, TrainingProvider, TrainerProfile, LearnerProfile } = require('../models');
+
+const isSmtpDisabled = () => String(process.env.DISABLE_SMTP_EMAIL || 'false').toLowerCase() === 'true';
 
 const sendVerificationEmail = async (email, token) => {
     const transporter = nodemailer.createTransport({
@@ -33,6 +36,12 @@ const sendVerificationEmail = async (email, token) => {
     });
 };
 
+const getLearnerProgressStatus = (profile) => {
+    if (profile.completed) return 'completed';
+    if (profile.inProgress) return 'in_progress';
+    return 'not_started';
+};
+
 // POST: Register a new user
 router.post("/register", async (req, res) => {
     let data = req.body;
@@ -51,16 +60,44 @@ router.post("/register", async (req, res) => {
             return;
         }
 
+        const transaction = await User.sequelize.transaction();
+        const smtpDisabled = isSmtpDisabled();
+
         data.password = await bcrypt.hash(data.password, 10);
-        data.verificationToken = crypto.randomBytes(32).toString('hex');
-        data.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+        if (smtpDisabled) {
+            data.isVerified = true;
+            data.verificationToken = null;
+            data.verificationTokenExpires = null;
+        } else {
+            data.verificationToken = crypto.randomBytes(32).toString('hex');
+            data.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+        }
 
-        let result = await User.create(data);
-        await sendVerificationEmail(result.email, result.verificationToken);
+        try {
+            let result = await User.create(data, { transaction });
+            if (!smtpDisabled) {
+                await sendVerificationEmail(result.email, result.verificationToken);
+            }
+            await transaction.commit();
 
-        res.json({ message: `User ${result.email} was registered successfully. Please verify your email.` });
+            if (smtpDisabled) {
+                return res.json({ message: `User ${result.email} was registered and auto-verified (SMTP disabled).` });
+            }
+
+            res.json({ message: `User ${result.email} was registered successfully. Please verify your email.` });
+        } catch (err) {
+            await transaction.rollback();
+            console.error('Registration failed, transaction rolled back:', err.message);
+            return res.status(503).json({
+                message: 'Registration service temporarily unavailable. Please try again later.'
+            });
+        }
     } catch (err) {
-        res.status(400).json({ errors: err.errors });
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ errors: err.errors });
+        }
+
+        res.status(500).json({ message: 'Registration failed.' });
     }
 });
 
@@ -94,6 +131,15 @@ router.post("/login", async (req, res) => {
 
         let match = await bcrypt.compare(data.password, user.password);
         if (!match) return res.status(400).json({ message: "Email or password wrong." });
+
+        if (isSmtpDisabled() && !user.isVerified) {
+            await user.update({
+                isVerified: true,
+                verificationToken: null,
+                verificationTokenExpires: null
+            });
+            user.isVerified = true;
+        }
 
         let userInfo = { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, usertype: user.usertype };
         let accessToken = sign({ user: userInfo }, process.env.APP_SECRET, { expiresIn: process.env.TOKEN_EXPIRES_IN });
@@ -167,6 +213,70 @@ router.put("/ecosystem-profile", validateToken, async (req, res) => {
         res.json({ message: "Ecosystem details saved." });
     } catch (err) {
         res.status(400).json({ message: "Save failed.", error: err });
+    }
+});
+
+// GET: Learner Dashboard
+router.get('/learner-dashboard', validateToken, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        if (user.usertype !== 'Learner') {
+            return res.status(403).json({ message: 'Learner dashboard is only available for learner accounts.' });
+        }
+
+        const [learnerProfile] = await LearnerProfile.findOrCreate({
+            where: { userId: user.id },
+            defaults: { userId: user.id }
+        });
+
+        const progressStatus = getLearnerProgressStatus(learnerProfile);
+        const completionPercent = progressStatus === 'completed' ? 100 : progressStatus === 'in_progress' ? 50 : 0;
+
+        return res.json({
+            learner: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                usertype: user.usertype,
+                isVerified: user.isVerified
+            },
+            dashboard: {
+                enrolledCourse: learnerProfile.enrolledCourse || '',
+                moduleHours: learnerProfile.moduleHours || 0,
+                statusFlags: {
+                    notStarted: Boolean(learnerProfile.notStarted),
+                    inProgress: Boolean(learnerProfile.inProgress),
+                    completed: Boolean(learnerProfile.completed)
+                },
+                progressStatus,
+                completionPercent
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Error loading learner dashboard.', error: err.message });
+    }
+});
+
+// DELETE: Remove all non-persistent users (admin-only)
+router.delete('/admin/non-persistent-users', validateToken, async (req, res) => {
+    try {
+        const requester = await User.findByPk(req.user.id);
+        if (!requester || requester.email !== 'admin123@abc.com') {
+            return res.status(403).json({ message: 'Only the test admin account can run this action.' });
+        }
+
+        await ensurePersistentTestUsers(User, TrainerProfile);
+        const cleanupResult = await cleanupNonPersistentUsers(User);
+        res.json({
+            message: `Removed ${cleanupResult.deletedCount} non-persistent account(s).`,
+            remainingUsers: cleanupResult.remainingUsers
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Cleanup failed.', error: err.message });
     }
 });
 
