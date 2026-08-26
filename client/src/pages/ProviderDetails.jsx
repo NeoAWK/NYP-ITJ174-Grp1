@@ -11,8 +11,8 @@ function ProviderDetails() {
     useEffect(() => {
         if (!details) {
             http.get("/user/ecosystem-profile").then((res) => {
-                if (res.data.details) {
-                    setDetails(res.data.details);
+                if (res.data.profiles?.trainingProvider) {
+                    setDetails(res.data.profiles.trainingProvider);
                 }
                 setLoading(false);
             }).catch(() => setLoading(false));

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     Box, 
     Typography, 
@@ -10,7 +10,8 @@ import {
     InputLabel, 
     Select, 
     MenuItem, 
-    FormHelperText 
+    FormHelperText,
+    Chip
 } from '@mui/material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -38,7 +39,10 @@ const interestOptions = [
 
 function RegisterLearner() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const editMode = Boolean(location.state?.editMode);
     const [loading, setLoading] = useState(true);
+    const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -58,16 +62,21 @@ function RegisterLearner() {
             }
 
             // 2. Layer in any previously-saved learner profile details
+            //    (checked independently of the account's current active usertype,
+            //    since a user can hold multiple role registrations at once)
             try {
                 const profileRes = await http.get("/user/ecosystem-profile");
-                const details = profileRes.data.details;
+                const learnerProfile = profileRes.data.profiles?.learner;
+                if (learnerProfile && learnerProfile.name) {
+                    setAlreadyRegistered(true);
+                }
                 formik.setValues({
                     name: name,
                     email: email,
-                    mobileNo: details?.mobileNo || '',
-                    educationQualification: details?.educationQualification || '',
-                    areaOfInterest: details?.areaOfInterest || '',
-                    attachment: details?.attachment || ''
+                    mobileNo: learnerProfile?.mobileNo || '',
+                    educationQualification: learnerProfile?.educationQualification || '',
+                    areaOfInterest: learnerProfile?.areaOfInterest || '',
+                    attachment: learnerProfile?.attachment || ''
                 });
             } catch (err) {
                 formik.setValues({
@@ -119,7 +128,7 @@ function RegisterLearner() {
             };
 
             http.put("/user/ecosystem-profile", payload).then(() => {
-                toast.success("Learner registration details saved successfully!");
+                toast.success(alreadyRegistered ? "Learner registration details updated successfully!" : "Learner registration details saved successfully!");
                 navigate('/learner-details', { state: { learnerData: { ...payload, status: 'Registered' } } });
             }).catch((err) => {
                 toast.error(err.response?.data?.message || "Failed to save registration details.");
@@ -129,11 +138,45 @@ function RegisterLearner() {
 
     if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 5 }} />;
 
+    if (alreadyRegistered && !editMode) {
+        return (
+            <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, mb: 4, p: 2, textAlign: 'center' }}>
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                    Learner Registration Page
+                </Typography>
+                <Chip
+                    label="Registered"
+                    color="success"
+                    sx={{ fontWeight: 'bold', fontSize: '0.9rem', my: 2 }}
+                />
+                <Typography sx={{ mb: 3 }}>
+                    You have already submitted a Learner registration and cannot resubmit it.
+                </Typography>
+                <Button variant="contained" onClick={() => navigate('/learner-details')}>
+                    View My Registration
+                </Button>
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, mb: 4, p: 2 }}>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
                 Learner Registration Page
             </Typography>
+
+            {editMode && (
+                <Box sx={{ mb: 2 }}>
+                    <Chip
+                        label="Registered"
+                        color="success"
+                        sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        You're updating your existing Learner registration.
+                    </Typography>
+                </Box>
+            )}
 
             <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 'bold' }}>
                 Learner Details
@@ -277,7 +320,7 @@ function RegisterLearner() {
                     fullWidth 
                     sx={{ mt: 3 }}
                 >
-                    Save Registration Info
+                    {alreadyRegistered ? 'Update Registration Info' : 'Save Registration Info'}
                 </Button>
             </form>
             <ToastContainer />

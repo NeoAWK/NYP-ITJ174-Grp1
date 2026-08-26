@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Box, Typography, TextField, Button, CircularProgress, 
-    MenuItem, Select, FormControl, InputLabel, FormHelperText, Alert 
+    MenuItem, Select, FormControl, InputLabel, FormHelperText, Alert, Chip
 } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -35,6 +35,7 @@ function RegisterTrainer() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [userData, setUserData] = useState({ id: '', name: '', email: '' });
+    const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
     const formik = useFormik({
         enableReinitialize: true,
@@ -103,6 +104,17 @@ function RegisterTrainer() {
             setUserData({ id, name, email });
             formik.setFieldValue("name", name);
             formik.setFieldValue("emailAddress", email);
+
+            try {
+                const profileRes = await http.get("/user/ecosystem-profile");
+                const trainerProfile = profileRes.data.profiles?.trainer;
+                if (trainerProfile && trainerProfile.name) {
+                    setAlreadyRegistered(true);
+                }
+            } catch (err) {
+                console.error("Failed to fetch existing trainer profile", err);
+            }
+
             setLoading(false);
         };
 
@@ -128,6 +140,28 @@ function RegisterTrainer() {
     };
 
     if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 5 }} />;
+
+    if (alreadyRegistered) {
+        return (
+            <Box sx={{ maxWidth: 700, mx: 'auto', mt: 4, mb: 8, textAlign: 'center' }}>
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                    Trainer Registration Page
+                </Typography>
+                <Chip
+                    label="Pending Approval"
+                    color="warning"
+                    sx={{ fontWeight: 'bold', fontSize: '0.9rem', my: 2 }}
+                />
+                <Typography sx={{ mb: 3 }}>
+                    You have already submitted a Trainer registration. It is currently awaiting
+                    approval, so it cannot be resubmitted at this time.
+                </Typography>
+                <Button variant="contained" onClick={() => navigate('/trainer-details')}>
+                    View My Registration
+                </Button>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ maxWidth: 700, mx: 'auto', mt: 4, mb: 8 }}>

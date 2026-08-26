@@ -11,8 +11,8 @@ function TrainerDetails() {
     useEffect(() => {
         if (!details) {
             http.get("/user/ecosystem-profile").then((res) => {
-                if (res.data.details) {
-                    setDetails(res.data.details);
+                if (res.data.profiles?.trainer) {
+                    setDetails(res.data.profiles.trainer);
                 }
                 setLoading(false);
             }).catch(() => setLoading(false));

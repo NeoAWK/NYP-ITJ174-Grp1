@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Box, Typography, Card, CardContent, Chip, Grid, Divider, CircularProgress } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Box, Typography, Card, CardContent, Chip, Grid, Divider, CircularProgress, Button } from '@mui/material';
 import http from '../http';
 
 function LearnerDetails() {
     const location = useLocation();
+    const navigate = useNavigate();
     const [details, setDetails] = useState(location.state?.learnerData || null);
     const [loading, setLoading] = useState(!details);
 
     useEffect(() => {
         if (!details) {
             http.get("/user/ecosystem-profile").then((res) => {
-                if (res.data.details) {
-                    setDetails(res.data.details);
+                if (res.data.profiles?.learner) {
+                    setDetails(res.data.profiles.learner);
                 }
                 setLoading(false);
             }).catch(() => setLoading(false));
@@ -69,6 +70,12 @@ function LearnerDetails() {
                             <strong>Attached File:</strong> {details.attachment || 'Not provided'}
                         </Grid>
                     </Grid>
+
+                    <Box sx={{ mt: 4, textAlign: 'right' }}>
+                        <Button variant="contained" onClick={() => navigate('/register-learner', { state: { editMode: true } })}>
+                            Update Information
+                        </Button>
+                    </Box>
                 </CardContent>
             </Card>
         </Box>

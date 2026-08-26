@@ -138,16 +138,32 @@ router.put("/update", validateToken, async (req, res) => {
 router.get("/ecosystem-profile", validateToken, async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id);
-        let profileData = { user: { id: user.id, name: user.name, usertype: user.usertype }, details: null };
 
-        if (user.usertype === 'Training Provider') {
-            profileData.details = await TrainingProvider.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } }).then(([rec]) => rec);
-        } else if (user.usertype === 'Trainer') {
-            profileData.details = await TrainerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } }).then(([rec]) => rec);
-        } else if (user.usertype === 'Learner') {
-            profileData.details = await LearnerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } }).then(([rec]) => rec);
-        }
-        res.json(profileData);
+        // Every user can independently hold a Training Provider, Trainer, and/or
+        // Learner registration at the same time. Ensure all three rows exist
+        // (findOrCreate) and return them all under "profiles", keyed by role,
+        // so status can be checked per-role regardless of which one is currently
+        // "active" (user.usertype).
+        const [trainingProviderProfile] = await TrainingProvider.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } });
+        const [trainerProfile] = await TrainerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } });
+        const [learnerProfile] = await LearnerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } });
+
+        // "details" kept for backward compatibility — mirrors whichever profile
+        // matches the user's current usertype, same as before this change.
+        let details = null;
+        if (user.usertype === 'Training Provider') details = trainingProviderProfile;
+        else if (user.usertype === 'Trainer') details = trainerProfile;
+        else if (user.usertype === 'Learner') details = learnerProfile;
+
+        res.json({
+            user: { id: user.id, name: user.name, usertype: user.usertype },
+            details,
+            profiles: {
+                trainingProvider: trainingProviderProfile,
+                trainer: trainerProfile,
+                learner: learnerProfile
+            }
+        });
     } catch (err) {
         res.status(500).json({ message: "Error fetching profiles", error: err });
     }

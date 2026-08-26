@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Box, Typography, TextField, Button, CircularProgress, 
-    MenuItem, Select, FormControl, InputLabel, FormHelperText, Alert 
+    MenuItem, Select, FormControl, InputLabel, FormHelperText, Alert, Chip
 } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -36,6 +36,7 @@ function RegisterProvider() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [userData, setUserData] = useState({ name: '', email: '' });
+    const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
     useEffect(() => {
         // 1. Try decoding logged-in user details directly from stored JWT token
@@ -50,7 +51,9 @@ function RegisterProvider() {
             }
         }
 
-        // 2. Fetch fresh profile details from API as backup
+        // 2. Fetch fresh profile details from API as backup, and check whether
+        //    this account has already submitted a Training Provider registration.
+        //    If so, block re-registration while it's pending approval.
         http.get("/user/auth")
             .then((res) => {
                 if (res.data) {
@@ -62,7 +65,17 @@ function RegisterProvider() {
                 }
             })
             .catch(() => {})
-            .finally(() => setLoading(false));
+            .finally(() => {
+                http.get("/user/ecosystem-profile")
+                    .then((profileRes) => {
+                        const providerProfile = profileRes.data.profiles?.trainingProvider;
+                        if (providerProfile && providerProfile.name) {
+                            setAlreadyRegistered(true);
+                        }
+                    })
+                    .catch((err) => console.error("Failed to fetch existing provider profile", err))
+                    .finally(() => setLoading(false));
+            });
     }, []);
 
     const formik = useFormik({
@@ -111,6 +124,28 @@ function RegisterProvider() {
         (formik.touched[fieldName] || formik.submitCount > 0) ? formik.errors[fieldName] : '';
 
     if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 5 }} />;
+
+    if (alreadyRegistered) {
+        return (
+            <Box sx={{ maxWidth: 700, mx: 'auto', mt: 4, mb: 8, textAlign: 'center' }}>
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                    Training Provider Registration Page
+                </Typography>
+                <Chip
+                    label="Pending Approval"
+                    color="warning"
+                    sx={{ fontWeight: 'bold', fontSize: '0.9rem', my: 2 }}
+                />
+                <Typography sx={{ mb: 3 }}>
+                    You have already submitted a Training Provider registration. It is currently
+                    awaiting approval, so it cannot be resubmitted at this time.
+                </Typography>
+                <Button variant="contained" onClick={() => navigate('/provider-details')}>
+                    View My Registration
+                </Button>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ maxWidth: 700, mx: 'auto', mt: 4, mb: 8 }}>
