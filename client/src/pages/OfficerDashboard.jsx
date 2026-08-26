@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import RefreshIcon from '@mui/icons-material/Refresh'; // added
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
@@ -35,53 +36,66 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import CloseIcon from '@mui/icons-material/Close';
 import HighlightOffOutlinedIcon from '@mui/icons-material/HighlightOffOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
-// Express Backend Base URL
 const API_BASE_URL = 'http://localhost:3001';
 
+// Fallback data (kept for when API fails)
 const initialData = [
-  { id: 'RS-2026-001', title: 'Advanced Data Analytics with Python', level: 'Advanced', provider: 'TechLearn Academy', category: 'Data Science', duration: '40 hours', submitted: '14 Jul 2026', fee: 2500, status: 'Pending Review' },
-  { id: 'RS-2026-002', title: 'Workplace Health & Safety Fundamentals', level: 'Foundation', provider: 'SafeWork Training Ltd', category: 'Health & Safety', duration: '16 hours', submitted: '11 Jul 2026', fee: 850, status: 'Pending Review' },
-  { id: 'RS-2026-003', title: 'Project Management Professional Prep', level: 'Intermediate', provider: 'Meridian Skills Group', category: 'Management', duration: '60 hours', submitted: '28 Jun 2026', fee: 1800, status: 'Approved' },
-  { id: 'RS-2026-004', title: 'Digital Marketing Essentials', level: 'Foundation', provider: 'Clarity Learning Co.', category: 'Marketing', duration: '24 hours', submitted: '20 Jun 2026', fee: 1200, status: 'Rejected' },
-  { id: 'RS-2026-005', title: 'Leadership in Agile Environments', level: 'Intermediate', provider: 'Meridian Skills Group', category: 'Leadership', duration: '32 hours', submitted: '9 Jul 2026', fee: 1450, status: 'Pending Review' },
+  { id: 'RS-2026-001', title: 'Advanced Data Analytics with Python', level: 'Advanced', provider: 'TechLearn Academy', trainerName: 'John Doe', category: 'Data Science', duration: '40 hours', submitted: '14 Jul 2026', fee: 2500, status: 'Pending Review' },
+  { id: 'RS-2026-002', title: 'Workplace Health & Safety Fundamentals', level: 'Foundation', provider: 'SafeWork Training Ltd', trainerName: 'Jane Smith', category: 'Health & Safety', duration: '16 hours', submitted: '11 Jul 2026', fee: 850, status: 'Pending Review' },
+  { id: 'RS-2026-003', title: 'Project Management Professional Prep', level: 'Intermediate', provider: 'Meridian Skills Group', trainerName: 'Bob Johnson', category: 'Management', duration: '60 hours', submitted: '28 Jun 2026', fee: 1800, status: 'Approved' },
+  { id: 'RS-2026-004', title: 'Digital Marketing Essentials', level: 'Foundation', provider: 'Clarity Learning Co.', trainerName: 'Alice Brown', category: 'Marketing', duration: '24 hours', submitted: '20 Jun 2026', fee: 1200, status: 'Rejected' },
+  { id: 'RS-2026-005', title: 'Leadership in Agile Environments', level: 'Intermediate', provider: 'Meridian Skills Group', trainerName: 'Charlie Davis', category: 'Leadership', duration: '32 hours', submitted: '9 Jul 2026', fee: 1450, status: 'Pending Review' },
 ];
 
 function OfficerDashboard({ onAddNotification }) {
+  // ---- Course state ----
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter Menu State
   const [anchorEl, setAnchorEl] = useState(null);
   const [sortOption, setSortOption] = useState('newest');
 
-  // Rejection Modal State
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [reasonError, setReasonError] = useState(false);
   const [emailNotification, setEmailNotification] = useState(null);
 
-  // Fetch course data with safe normalization
+  // ---- Trainer state ----
+  const [trainers, setTrainers] = useState([]);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
+  const [trainerSearchTerm, setTrainerSearchTerm] = useState('');
+  const [expandedProviders, setExpandedProviders] = useState(new Set());
+
+  // ---- Fetch courses ----
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/courses`);
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_BASE_URL}/courses`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
       if (!res.ok) throw new Error('Network response was not ok');
       const data = await res.json();
+      console.log('API response (courses):', data); // debug
 
       if (data && data.length > 0) {
         const normalizedData = data.map((item) => {
           let statusVal = item.status || item.SubmissionStatus || 'Pending Review';
           if (statusVal === 'Pending') statusVal = 'Pending Review';
-
           return {
             id: item.id || item.CourseID || 'N/A',
             rawId: item.rawId || item.id,
             title: item.title || item.CourseTitle || 'Untitled Course',
             level: item.level || item.CourseLevel || 'Foundation',
-            provider: item.provider || item.Provider || item.TrainingProvider || 'Training Provider',
+            trainerId: item.TrainerId,
+            trainerName: item.TrainerName || 'Freelance',
+            providerId: item.ProviderId,
+            provider: item.ProviderName || 'Unassigned',
             category: item.category || item.Category || 'General',
             duration: item.duration || item.Duration || 'N/A',
             submitted: item.submitted || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '14 Jul 2026'),
@@ -101,10 +115,33 @@ function OfficerDashboard({ onAddNotification }) {
     }
   };
 
+  // ---- Fetch trainers ----
+  const fetchTrainers = async () => {
+    setLoadingTrainers(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_BASE_URL}/trainers`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
+      if (!res.ok) throw new Error('Failed to fetch trainers');
+      const data = await res.json();
+      console.log('Trainers fetched:', data);
+      setTrainers(data);
+    } catch (err) {
+      console.error('Error fetching trainers:', err);
+      setTrainers([]);
+    } finally {
+      setLoadingTrainers(false);
+    }
+  };
+
+  // ---- Effects ----
   useEffect(() => {
     fetchCourses();
+    fetchTrainers();
   }, []);
 
+  // ---- Course handlers ----
   const handleOpenFilterMenu = (event) => setAnchorEl(event.currentTarget);
   const handleCloseFilterMenu = () => setAnchorEl(null);
 
@@ -113,7 +150,6 @@ function OfficerDashboard({ onAddNotification }) {
     handleCloseFilterMenu();
   };
 
-  // Dynamic Approval Handler
   const handleApproveCourse = async (course) => {
     try {
       const targetId = course.rawId || course.id;
@@ -130,7 +166,7 @@ function OfficerDashboard({ onAddNotification }) {
           adminEmail: 'admin123@abc.com',
           action: 'COURSE_APPROVED',
           targetEntity: `Course ID: ${course.id}`,
-          details: `Approved application for ${course.title}`
+          details: `Approved application for ${course.title}`,
         }),
       });
 
@@ -152,7 +188,6 @@ function OfficerDashboard({ onAddNotification }) {
     setReasonError(false);
   };
 
-  // Dynamic Rejection Handler
   const handleConfirmRejection = async () => {
     if (!rejectionReason.trim()) {
       setReasonError(true);
@@ -168,7 +203,7 @@ function OfficerDashboard({ onAddNotification }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'Rejected',
-          rejectionReason: trimmedReason
+          rejectionReason: trimmedReason,
         }),
       });
 
@@ -179,7 +214,7 @@ function OfficerDashboard({ onAddNotification }) {
           adminEmail: 'admin123@abc.com',
           action: 'COURSE_REJECTED',
           targetEntity: `Course ID: ${selectedCourse.id}`,
-          details: `Rejected application for ${selectedCourse.title}. Reason: ${trimmedReason}`
+          details: `Rejected application for ${selectedCourse.title}. Reason: ${trimmedReason}`,
         }),
       });
 
@@ -190,7 +225,7 @@ function OfficerDashboard({ onAddNotification }) {
       setEmailNotification({
         subject: emailSubject,
         body: emailBody,
-        provider: selectedCourse.provider
+        provider: selectedCourse.provider,
       });
 
       if (onAddNotification) {
@@ -198,7 +233,7 @@ function OfficerDashboard({ onAddNotification }) {
           title: selectedCourse.title,
           provider: selectedCourse.provider,
           subject: emailSubject,
-          body: emailBody
+          body: emailBody,
         });
       }
 
@@ -209,6 +244,7 @@ function OfficerDashboard({ onAddNotification }) {
     }
   };
 
+  // ---- Computed course stats ----
   const pendingCount = courses.filter((c) => c.status === 'Pending Review').length;
   const approvedCount = courses.filter((c) => c.status === 'Approved').length;
   const rejectedCount = courses.filter((c) => c.status === 'Rejected').length;
@@ -218,6 +254,7 @@ function OfficerDashboard({ onAddNotification }) {
       const matchesSearch =
         (c.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.provider || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.trainerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.id || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesTab =
@@ -236,8 +273,43 @@ function OfficerDashboard({ onAddNotification }) {
       return 0;
     });
 
+  // ---- Trainer filtering and grouping ----
+  const filteredTrainers = trainers.filter((trainer) => {
+    if (!trainerSearchTerm.trim()) return true;
+    const term = trainerSearchTerm.toLowerCase().trim();
+    return (
+      (trainer.name || '').toLowerCase().includes(term) ||
+      (trainer.email || '').toLowerCase().includes(term) ||
+      (trainer.qualifications || '').toLowerCase().includes(term) ||
+      (trainer.certification || '').toLowerCase().includes(term) ||
+      (trainer.providerName || '').toLowerCase().includes(term)
+    );
+  });
+
+  const groupedTrainers = filteredTrainers.reduce((acc, trainer) => {
+    const provider = trainer.providerName || 'Unassigned';
+    if (!acc[provider]) acc[provider] = [];
+    acc[provider].push(trainer);
+    return acc;
+  }, {});
+
+  const providerNames = Object.keys(groupedTrainers).sort();
+
+  const toggleProvider = (providerName) => {
+    const newSet = new Set(expandedProviders);
+    if (newSet.has(providerName)) {
+      newSet.delete(providerName);
+    } else {
+      newSet.add(providerName);
+    }
+    setExpandedProviders(newSet);
+  };
+
+  const showTrainers = trainers.length > 0;
+
   return (
     <Box sx={{ pb: 4, flexGrow: 1 }}>
+      {/* Rejection email notification */}
       {emailNotification && (
         <Alert
           severity="info"
@@ -250,16 +322,21 @@ function OfficerDashboard({ onAddNotification }) {
           <Typography variant="caption" display="block" fontWeight="600" color="text.secondary" sx={{ mb: 1 }}>
             {emailNotification.subject}
           </Typography>
-          <Typography variant="body2" sx={{ whiteSpace: 'pre-line', fontFamily: 'monospace', backgroundColor: '#f8fafc', p: 1.5, borderRadius: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{ whiteSpace: 'pre-line', fontFamily: 'monospace', backgroundColor: '#f8fafc', p: 1.5, borderRadius: 1 }}
+          >
             {emailNotification.body}
           </Typography>
         </Alert>
       )}
 
+      {/* ---- Course Submissions Section ---- */}
       <Typography variant="h5" fontWeight="700" sx={{ mb: 3, color: '#0f172a' }}>
         Course Submissions
       </Typography>
 
+      {/* Stats Cards */}
       <Box sx={{ display: 'flex', gap: 2.5, mb: 4, flexWrap: 'wrap' }}>
         <Card elevation={0} sx={{ flex: '1 1 200px', border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
@@ -302,6 +379,7 @@ function OfficerDashboard({ onAddNotification }) {
         </Card>
       </Box>
 
+      {/* Course Table */}
       <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
         <Box sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: 2 }}>
           <Box sx={{ display: 'flex', gap: 1, backgroundColor: '#f1f5f9', p: 0.5, borderRadius: 2 }}>
@@ -334,7 +412,7 @@ function OfficerDashboard({ onAddNotification }) {
           <Box sx={{ display: 'flex', gap: 1.5 }}>
             <TextField
               size="small"
-              placeholder="Search courses or provider"
+              placeholder="Search courses, provider or trainer"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -352,6 +430,14 @@ function OfficerDashboard({ onAddNotification }) {
               sx={{ textTransform: 'uppercase', fontWeight: 600 }}
             >
               Filter
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchCourses}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
+              Refresh
             </Button>
             <Menu
               anchorEl={anchorEl}
@@ -377,6 +463,7 @@ function OfficerDashboard({ onAddNotification }) {
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>SUBMISSION ID</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>COURSE TITLE</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>PROVIDER</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>TRAINER</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>CATEGORY</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>DURATION</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>SUBMITTED</TableCell>
@@ -388,13 +475,13 @@ function OfficerDashboard({ onAddNotification }) {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
               ) : filteredCourses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 4, color: '#64748b' }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4, color: '#64748b' }}>
                     No course submissions found.
                   </TableCell>
                 </TableRow>
@@ -407,6 +494,7 @@ function OfficerDashboard({ onAddNotification }) {
                       <Typography variant="caption" color="text.secondary">{row.level}</Typography>
                     </TableCell>
                     <TableCell sx={{ fontSize: 13 }}>{row.provider}</TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>{row.trainerName || '—'}</TableCell>
                     <TableCell><Chip label={row.category} size="small" sx={{ backgroundColor: '#f1f5f9', fontWeight: 600, fontSize: 11 }} /></TableCell>
                     <TableCell sx={{ fontSize: 13 }}>{row.duration}</TableCell>
                     <TableCell sx={{ fontSize: 13 }}>{row.submitted}</TableCell>
@@ -452,7 +540,108 @@ function OfficerDashboard({ onAddNotification }) {
         </TableContainer>
       </Paper>
 
-      {/* Rejection Modal */}
+      {/* ---- Trainers Section ---- */}
+      {showTrainers && (
+        <Paper elevation={0} sx={{ mt: 4, border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+          <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="h6" fontWeight="700">
+              All Trainers
+            </Typography>
+            <TextField
+              size="small"
+              placeholder="Search trainers..."
+              value={trainerSearchTerm}
+              onChange={(e) => setTrainerSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#94a3b8', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                endAdornment: trainerSearchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setTrainerSearchTerm('')}>
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+              sx={{ width: { xs: '100%', sm: 300 } }}
+            />
+          </Box>
+
+          <TableContainer>
+            <Table>
+              <TableHead sx={{ backgroundColor: '#fafafa' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Trainer Name</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Qualifications</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Certification</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingTrainers ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <CircularProgress size={32} />
+                    </TableCell>
+                  </TableRow>
+                ) : providerNames.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: '#64748b' }}>
+                      No trainers found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  providerNames.map((providerName) => {
+                    const trainerList = groupedTrainers[providerName];
+                    const isExpanded = expandedProviders.has(providerName);
+                    return (
+                      <React.Fragment key={providerName}>
+                        {/* Provider header row */}
+                        <TableRow
+                          hover
+                          sx={{ backgroundColor: '#f8fafc', cursor: 'pointer' }}
+                          onClick={() => toggleProvider(providerName)}
+                        >
+                          <TableCell colSpan={4} sx={{ py: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <IconButton size="small">
+                                {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                              </IconButton>
+                              <Typography variant="subtitle2" fontWeight="700" color="#0f172a">
+                                {providerName}
+                              </Typography>
+                              <Chip
+                                label={`${trainerList.length} trainer${trainerList.length > 1 ? 's' : ''}`}
+                                size="small"
+                                sx={{ ml: 1, backgroundColor: '#e2e8f0', fontWeight: 600, fontSize: 11 }}
+                              />
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                        {/* Trainer rows (if expanded) */}
+                        {isExpanded &&
+                          trainerList.map((trainer, index) => (
+                            <TableRow key={trainer.trainerId || index} hover sx={{ '& > td': { py: 1 } }}>
+                              <TableCell>{trainer.name || '—'}</TableCell>
+                              <TableCell>{trainer.email || '—'}</TableCell>
+                              <TableCell>{trainer.qualifications || '—'}</TableCell>
+                              <TableCell>{trainer.certification || '—'}</TableCell>
+                            </TableRow>
+                          ))}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
+
+      {/* ---- Rejection Modal ---- */}
       <Dialog
         open={Boolean(selectedCourse)}
         onClose={handleCloseRejectModal}

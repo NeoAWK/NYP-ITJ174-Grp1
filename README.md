@@ -130,6 +130,12 @@ Use this account when backend runs without DB setup:
 - Email for RS Officer: admin123@abc.com
 - Password: P@ssw0rd
 
+- Email for Trainer: test.trainer@rightskills.local
+- Password: TrainerPass123!
+
+- Email for Provider: provider@test.com
+- Password: P@ssw0rd
+
 ## Main Routes (Client)
 
 - / : landing

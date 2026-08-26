@@ -91,10 +91,8 @@ router.post("/login", async (req, res) => {
 
         let user = await User.findOne({ where: { email: data.email } });
         if (!user) return res.status(400).json({ message: "Email or password wrong." });
-
         let match = await bcrypt.compare(data.password, user.password);
         if (!match) return res.status(400).json({ message: "Email or password wrong." });
-
         let userInfo = { id: user.id, email: user.email, name: user.name, isVerified: user.isVerified, usertype: user.usertype };
         let accessToken = sign({ user: userInfo }, process.env.APP_SECRET, { expiresIn: process.env.TOKEN_EXPIRES_IN });
         res.json({ accessToken: accessToken, user: userInfo });
@@ -168,6 +166,43 @@ router.put("/ecosystem-profile", validateToken, async (req, res) => {
     } catch (err) {
         res.status(400).json({ message: "Save failed.", error: err });
     }
+});
+// GET all users
+router.get('/',  async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'usertype', 'mobileNo', 'isVerified', 'createdAt', 'updatedAt'] // exclude password
+    });
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+// admin.js
+router.put('/:id', validateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, email, usertype, mobileNo, isVerified } = req.body;
+  try {
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    await user.update({ name, email, usertype, mobileNo, isVerified });
+    res.json({ message: 'User updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', validateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    await user.destroy(); // cascades to profile tables
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

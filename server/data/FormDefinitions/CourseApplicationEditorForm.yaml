@@ -1,0 +1,58 @@
+title: RightSkills Course Accreditation Application Form
+instructions: Please complete all required sections below to submit your course for accreditation by RightSkills Officers.
+sections:
+  - id: sec1
+    title: Section 1 | Provider Details
+    fields:
+      - id: f1
+        label: Organization Name
+        type: text
+        required: true
+        helpText: Registered business name
+      - id: f2
+        label: UEN / Registration Number
+        type: text
+        required: true
+        helpText: Unique Entity Number
+        target: training_providers.companyRegistrationId
+      - id: f3
+        label: Primary Contact Email
+        type: email
+        required: true
+        helpText: Official correspondence email
+  - id: sec2
+    title: Section 2 | Course Information
+    fields:
+      - id: f4
+        label: Course Title
+        type: text
+        required: true
+        helpText: Full title as intended for certificate
+      - id: f5
+        label: Target Skill Level
+        type: select
+        required: true
+        helpText: Foundation, Intermediate, Advanced
+      - id: f6
+        label: Total Course Duration (Hours)
+        type: number
+        required: true
+        helpText: Minimum required 16 hours
+      - id: f7
+        label: Course Syllabus & Outline
+        type: textarea
+        required: true
+        helpText: Attach or detail module breakdowns
+  - id: sec3
+    title: Section 3 | Trainer & Venue Qualifications
+    fields:
+      - id: f8
+        label: Lead Trainer Name
+        type: text
+        required: true
+        helpText: Primary instructor
+      - id: f9
+        label: Trainer Certification Documents
+        type: file
+        required: false
+        helpText: Upload PDF certificates

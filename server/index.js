@@ -32,11 +32,22 @@ function registerDatabaseRoutes() {
   const fileRoute = require('./routes/file');
   const adminRoute = require('./routes/admin');
   const courseRoute = require('./routes/course');
+  const formRoute = require('./routes/form'); 
+  const submissionsRouter = require('./routes/submission');
+  const databaseFieldsRouter = require('./routes/databaseFields');
+  const submitRoutes = require('./routes/formSubmit');
+  const trainerRoutes = require('./routes/trainer');
 
+  
+  if (trainerRoutes) app.use('/trainers', trainerRoutes);
+  if (submitRoutes) app.use('/submit-form', submitRoutes);  
+  if (databaseFieldsRouter) app.use('/api/database-fields', databaseFieldsRouter);
+  if (submissionsRouter) app.use('/submissions', submissionsRouter);
   if (userRoute) app.use('/user', userRoute);
   if (fileRoute) app.use('/file', fileRoute);
   if (adminRoute) app.use('/admin', adminRoute);
   if (courseRoute) app.use('/courses', courseRoute);
+  if (formRoute) app.use('/forms', formRoute);  
 }
 
 function registerPlaceholderRoutes() {

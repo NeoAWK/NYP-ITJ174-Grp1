@@ -26,7 +26,6 @@ import MarkEmailReadOutlinedIcon from '@mui/icons-material/MarkEmailReadOutlined
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
-import MyForm from './pages/MyForm';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
@@ -42,8 +41,15 @@ import TrainerDashboard from './pages/TrainerDashboard';
 import TrainerCourseDetail from './pages/TrainerCourseDetail';
 import OfficerDashboard from './pages/OfficerDashboard';
 import OfficerNotifications from './pages/OfficerNotifications';
-import CourseApplicationEditor from './pages/CourseApplicationEditor';
+import FormEditor from './pages/FormEditor';
 import AdminAuditLog from './pages/AdminAuditLog';
+import FormManagement from './pages/FormManagement';
+import ApplyFormPage from './pages/ApplyForm';
+import ProviderDashboard from './pages/ProviderDashboard'
+import UsersPage from './pages/users';
+import EditCourseModal from './pages/components/EditCourseModal';
+import CourseManagement from './pages/CourseManagement';
+import GraphPage from './pages/Graphpage';
 
 const defaultTheme = createTheme();
 
@@ -53,13 +59,17 @@ const initialNotifications = [
   { id: 3, type: 'New submission', title: 'Workplace Health & Safety Fundamentals', provider: 'SafeWork Training Ltd', time: '5d ago', unread: true },
   { id: 4, type: 'New submission', title: 'Leadership in Agile Environments', provider: 'Meridian Skills Group', time: '6d ago', unread: false },
 ];
-
+function PublicFormPage() {
+  const { slug } = useParams();
+  return <FormRenderer formSlug={slug} />;
+}
 function NavigationBar({ user, logout, notifications, setNotifications }) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
 
   const isOfficer = Boolean(user && user.email === 'admin123@abc.com');
   const isTrainer = Boolean(user && user.usertype === 'Trainer');
+  const isProvider = Boolean(user && user.usertype === "TrainingProvider")
 
   const handleNotificationClick = (event) => setAnchorEl(event.currentTarget);
   const handleNotificationClose = () => setAnchorEl(null);
@@ -92,31 +102,54 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
             </Typography>
           </Link>
 
-          {/* Regular User / Non-Officer Navigation */}
-          {!isOfficer && (
+          {/* Trainer */}
+          {isTrainer && (
             <Box sx={{ display: 'flex', gap: 3 }}>
               <Link to="/trainer-profile-overview" style={{ color: 'white', textDecoration: 'none' }}>
-                <Typography fontWeight="500">Trainer Profile</Typography>
+                <Typography fontWeight="500">HOME</Typography>
+              </Link>
+                            <Link to="/courses" style={{ textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Typography fontWeight="500">COURSES</Typography>
               </Link>
             </Box>
+          )}
+
+          {isProvider && (
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              <Link to="/provider-dashboard" style={{ color: 'white', textDecoration: 'none' }}>
+                <Typography fontWeight="500">HOME</Typography>
+              </Link>
+                            <Link to="/courses" style={{ textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Typography fontWeight="500">COURSES</Typography>
+              </Link>
+            </Box>
+            
           )}
 
           {/* Officer Navigation */}
           {isOfficer && (
             <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               <Link to="/officer-dashboard" style={{ textDecoration: 'none', color: 'white' }}>
-                <Typography fontWeight="500">Dashboard</Typography>
+                <Typography fontWeight="500">HOME</Typography>
               </Link>
               <Link to="/officer-notifications" style={{ textDecoration: 'none', color: 'white' }}>
-                <Typography fontWeight="500">Inbox</Typography>
+                <Typography fontWeight="500">INBOX</Typography>
               </Link>
-              <Link to="/officer-course-form" style={{ textDecoration: 'none', color: 'white' }}>
-                <Typography fontWeight="500">Course Application Form</Typography>
+              <Link to="/forms" style={{ textDecoration: 'none', color: 'white' }}>
+                <Typography fontWeight="500">FORMS</Typography>
+              </Link>
+              <Link to="/users" style={{ textDecoration: 'none', color: 'white' }}>
+                <Typography fontWeight="500">USERS</Typography>
+              </Link>
+              <Link to="/courses" style={{ textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Typography fontWeight="500">COURSES</Typography>
               </Link>
               <Link to="/admin-history" style={{ textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Typography fontWeight="500">History Log</Typography>
+                <Typography fontWeight="500">HISTORY</Typography>
               </Link>
+
             </Box>
+            
           )}
 
           <Box sx={{ flexGrow: 1 }} />
@@ -344,7 +377,7 @@ function App() {
                         ? <OfficerDashboard onAddNotification={handleAddNotification} />
                         : user?.usertype === 'Trainer'
                           ? <TrainerDashboard />
-                          : <RightSkillsLanding />
+                          : user?.usertype === 'TrainingProvider' ? <ProviderDashboard   /> : <RightSkillsLanding />
                     }
                   />
                   <Route path={"/register-provider"} element={user?.usertype === 'Trainer' ? <Navigate to="/" replace /> : <RegisterProvider />} />
@@ -356,13 +389,18 @@ function App() {
                   <Route path={"/trainer-dashboard/:id"} element={<TrainerCourseDetail />} />
                   <Route path={"/officer-dashboard"} element={<OfficerDashboard onAddNotification={handleAddNotification} />} />
                   <Route path={"/officer-notifications"} element={<OfficerNotifications notifications={notifications} />} />
-                  <Route path={"/officer-course-form"} element={<CourseApplicationEditor />} />
                   <Route path={"/admin-history"} element={<AdminAuditLog />} />
                   <Route path={"/register"} element={<Register />} />
                   <Route path={"/login"} element={<Login />} />
-                  <Route path={"/form"} element={<MyForm />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path={"/profile"} element={<Profile />} />
+                  <Route path={"/forms"} element={<FormManagement />} />
+                  <Route path={"/form/:slug"} element={<FormEditor />} />
+                  <Route path="/apply/:slug" element={<ApplyFormPage />} />
+                  <Route path="/provider-dashboard" element={<ProviderDashboard />} />
+                  <Route path="/users" element={<UsersPage />} />
+                   <Route path="/Courses" element={<CourseManagement />} />
+                    <Route path="/Graph" element={<GraphPage />} />
                 </Routes>
               </Container>
             </Box>

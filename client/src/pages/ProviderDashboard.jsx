@@ -15,16 +15,13 @@ import {
   Button,
   TextField,
   InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Alert,
   Menu,
   MenuItem,
   CircularProgress
 } from '@mui/material';
+
+import EditCourseModal from './components/EditCourseModal';
+import { Edit as EditIcon, Undo as UndoIcon } from '@mui/icons-material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -32,45 +29,34 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
-import CloseIcon from '@mui/icons-material/Close';
-import HighlightOffOutlinedIcon from '@mui/icons-material/HighlightOffOutlined';
 
 const API_BASE_URL = 'http://localhost:3001';
 
-// Fallback course data (used if backend is unavailable)
+// Fallback data
 const initialData = [
-  { id: 'RS-2026-001', title: 'Advanced Data Analytics with Python', level: 'Advanced', provider: 'TechLearn Academy', trainerName: 'John Doe', category: 'Data Science', duration: '40 hours', submitted: '14 Jul 2026', fee: 2500, status: 'Pending Review' },
-  { id: 'RS-2026-002', title: 'Workplace Health & Safety Fundamentals', level: 'Foundation', provider: 'SafeWork Training Ltd', trainerName: 'Jane Smith', category: 'Health & Safety', duration: '16 hours', submitted: '11 Jul 2026', fee: 850, status: 'Pending Review' },
-  { id: 'RS-2026-003', title: 'Project Management Professional Prep', level: 'Intermediate', provider: 'Meridian Skills Group', trainerName: 'Bob Johnson', category: 'Management', duration: '60 hours', submitted: '28 Jun 2026', fee: 1800, status: 'Approved' },
-  { id: 'RS-2026-004', title: 'Digital Marketing Essentials', level: 'Foundation', provider: 'Clarity Learning Co.', trainerName: 'Alice Brown', category: 'Marketing', duration: '24 hours', submitted: '20 Jun 2026', fee: 1200, status: 'Rejected' },
-  { id: 'RS-2026-005', title: 'Leadership in Agile Environments', level: 'Intermediate', provider: 'Meridian Skills Group', trainerName: 'Charlie Davis', category: 'Leadership', duration: '32 hours', submitted: '9 Jul 2026', fee: 1450, status: 'Pending Review' },
+  { id: 'RS-2026-001', title: 'Advanced Data Analytics with Python', level: 'Advanced', trainerName: 'John Doe', category: 'Data Science', duration: '40 hours', submitted: '14 Jul 2026', fee: 2500, status: 'Pending Review' },
+  { id: 'RS-2026-002', title: 'Workplace Health & Safety Fundamentals', level: 'Foundation', trainerName: 'Jane Smith', category: 'Health & Safety', duration: '16 hours', submitted: '11 Jul 2026', fee: 850, status: 'Pending Review' },
+  { id: 'RS-2026-003', title: 'Project Management Professional Prep', level: 'Intermediate', trainerName: 'Bob Johnson', category: 'Management', duration: '60 hours', submitted: '28 Jun 2026', fee: 1800, status: 'Approved' },
+  { id: 'RS-2026-004', title: 'Digital Marketing Essentials', level: 'Foundation', trainerName: 'Alice Brown', category: 'Marketing', duration: '24 hours', submitted: '20 Jun 2026', fee: 1200, status: 'Rejected' },
+  { id: 'RS-2026-005', title: 'Leadership in Agile Environments', level: 'Intermediate', trainerName: 'Charlie Davis', category: 'Leadership', duration: '32 hours', submitted: '9 Jul 2026', fee: 1450, status: 'Pending Review' },
 ];
 
-function OfficerDashboard({ onAddNotification, user }) {
-  // ---- Course state ----
+function ProviderDashboard() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter Menu State
   const [anchorEl, setAnchorEl] = useState(null);
   const [sortOption, setSortOption] = useState('newest');
 
-  // Rejection Modal State
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [reasonError, setReasonError] = useState(false);
-  const [emailNotification, setEmailNotification] = useState(null);
-
-  // ---- Trainer state (only for Admin & TrainingProvider) ----
   const [trainers, setTrainers] = useState([]);
   const [loadingTrainers, setLoadingTrainers] = useState(false);
 
-  // Determine if current user is an admin (can approve/reject)
-  const isAdmin = user && (user.usertype === 'RightSkills' || user.usertype === 'Admin');
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [isAppeal, setIsAppeal] = useState(false);
 
   // ---- Fetch courses ----
   const fetchCourses = async () => {
@@ -87,14 +73,12 @@ function OfficerDashboard({ onAddNotification, user }) {
         const normalizedData = data.map((item) => {
           let statusVal = item.status || item.SubmissionStatus || 'Pending Review';
           if (statusVal === 'Pending') statusVal = 'Pending Review';
-
           return {
             id: item.id || item.CourseID || 'N/A',
             rawId: item.rawId || item.id,
             title: item.title || item.CourseTitle || 'Untitled Course',
             level: item.level || item.CourseLevel || 'Foundation',
             trainerName: item.TrainerName || 'Freelance',
-            provider: item.ProviderName || 'Unassigned',
             category: item.category || item.Category || 'General',
             duration: item.duration || item.Duration || 'N/A',
             submitted: item.submitted || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '14 Jul 2026'),
@@ -114,12 +98,8 @@ function OfficerDashboard({ onAddNotification, user }) {
     }
   };
 
-  // ---- Fetch trainers (only for Admin or TrainingProvider) ----
+  // ---- Fetch trainers ----
   const fetchTrainers = async () => {
-    // Only fetch if user is Admin or TrainingProvider
-    if (!user || (user.usertype !== 'Admin' && user.usertype !== 'TrainingProvider' && user.usertype !== 'RightSkills')) {
-      return;
-    }
     setLoadingTrainers(true);
     try {
       const token = localStorage.getItem('accessToken');
@@ -137,122 +117,39 @@ function OfficerDashboard({ onAddNotification, user }) {
     }
   };
 
-  // ---- Effects ----
   useEffect(() => {
     fetchCourses();
+    fetchTrainers();
   }, []);
 
-  useEffect(() => {
-    fetchTrainers();
-  }, [user]);
-
-  // ---- Course handlers ----
+  // ---- Filter / sort handlers ----
   const handleOpenFilterMenu = (event) => setAnchorEl(event.currentTarget);
   const handleCloseFilterMenu = () => setAnchorEl(null);
-
   const handleSelectSort = (option) => {
     setSortOption(option);
     handleCloseFilterMenu();
   };
 
-  const handleApproveCourse = async (course) => {
-    if (!isAdmin) return;
-    try {
-      const targetId = course.rawId || course.id;
-      await fetch(`${API_BASE_URL}/courses/${targetId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Approved' }),
-      });
-
-      await fetch(`${API_BASE_URL}/admin/logs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminEmail: 'admin123@abc.com',
-          action: 'COURSE_APPROVED',
-          targetEntity: `Course ID: ${course.id}`,
-          details: `Approved application for ${course.title}`,
-        }),
-      });
-
-      await fetchCourses();
-    } catch (err) {
-      console.error('Failed to approve course:', err);
-    }
+  // ---- Modal handlers ----
+  const handleOpenEdit = (course) => {
+    setEditingCourse(course);
+    setIsAppeal(false);
+    setEditModalOpen(true);
   };
 
-  const handleOpenRejectModal = (course) => {
-    if (!isAdmin) return;
-    setSelectedCourse(course);
-    setRejectionReason('');
-    setReasonError(false);
+  const handleOpenAppeal = (course) => {
+    setEditingCourse(course);
+    setIsAppeal(true);
+    setEditModalOpen(true);
   };
 
-  const handleCloseRejectModal = () => {
-    setSelectedCourse(null);
-    setRejectionReason('');
-    setReasonError(false);
+  const handleCloseEdit = () => {
+    setEditModalOpen(false);
+    setEditingCourse(null);
+    setIsAppeal(false);
   };
 
-  const handleConfirmRejection = async () => {
-    if (!isAdmin || !selectedCourse) return;
-    if (!rejectionReason.trim()) {
-      setReasonError(true);
-      return;
-    }
-
-    try {
-      const trimmedReason = rejectionReason.trim();
-      const targetId = selectedCourse.rawId || selectedCourse.id;
-
-      await fetch(`${API_BASE_URL}/courses/${targetId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'Rejected',
-          rejectionReason: trimmedReason,
-        }),
-      });
-
-      await fetch(`${API_BASE_URL}/admin/logs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminEmail: 'admin123@abc.com',
-          action: 'COURSE_REJECTED',
-          targetEntity: `Course ID: ${selectedCourse.id}`,
-          details: `Rejected application for ${selectedCourse.title}. Reason: ${trimmedReason}`,
-        }),
-      });
-
-      const uniqueEmailId = `MSG-${Math.floor(100000 + Math.random() * 900000)}`;
-      const emailSubject = `<Subject - Rejection of Course Application> <${uniqueEmailId}>`;
-      const emailBody = `Dear ${selectedCourse.provider}\n\nThe course, ${selectedCourse.title}, ${selectedCourse.id} has been rejected due to ${trimmedReason}. Please resubmit the course application with the updated information.\n\nIf you have any enquiry related to this, please reply on this email and our officers will get back to you as soon as possible, thank you.\n\nBest Regards\nRightSkills Officer`;
-
-      setEmailNotification({
-        subject: emailSubject,
-        body: emailBody,
-        provider: selectedCourse.provider,
-      });
-
-      if (onAddNotification) {
-        onAddNotification({
-          title: selectedCourse.title,
-          provider: selectedCourse.provider,
-          subject: emailSubject,
-          body: emailBody,
-        });
-      }
-
-      await fetchCourses();
-      handleCloseRejectModal();
-    } catch (err) {
-      console.error('Failed to reject course:', err);
-    }
-  };
-
-  // ---- Computed course stats ----
+  // ---- Computed stats ----
   const pendingCount = courses.filter((c) => c.status === 'Pending Review').length;
   const approvedCount = courses.filter((c) => c.status === 'Approved').length;
   const rejectedCount = courses.filter((c) => c.status === 'Rejected').length;
@@ -261,7 +158,6 @@ function OfficerDashboard({ onAddNotification, user }) {
     .filter((c) => {
       const matchesSearch =
         (c.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.provider || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.trainerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.id || '').toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -281,32 +177,10 @@ function OfficerDashboard({ onAddNotification, user }) {
       return 0;
     });
 
-  // ---- Render ----
+  const showTrainers = trainers.length > 0;
+
   return (
     <Box sx={{ pb: 4, flexGrow: 1 }}>
-      {/* Rejection email notification */}
-      {emailNotification && (
-        <Alert
-          severity="info"
-          onClose={() => setEmailNotification(null)}
-          sx={{ mb: 3, borderRadius: 2, border: '1px solid #bfdbfe' }}
-        >
-          <Typography variant="subtitle2" fontWeight="700" sx={{ mb: 0.5 }}>
-            Rejection Email Sent to {emailNotification.provider}
-          </Typography>
-          <Typography variant="caption" display="block" fontWeight="600" color="text.secondary" sx={{ mb: 1 }}>
-            {emailNotification.subject}
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ whiteSpace: 'pre-line', fontFamily: 'monospace', backgroundColor: '#f8fafc', p: 1.5, borderRadius: 1 }}
-          >
-            {emailNotification.body}
-          </Typography>
-        </Alert>
-      )}
-
-      {/* ---- Course Submissions Section ---- */}
       <Typography variant="h5" fontWeight="700" sx={{ mb: 3, color: '#0f172a' }}>
         Course Submissions
       </Typography>
@@ -387,7 +261,7 @@ function OfficerDashboard({ onAddNotification, user }) {
           <Box sx={{ display: 'flex', gap: 1.5 }}>
             <TextField
               size="small"
-              placeholder="Search courses, provider or trainer"
+              placeholder="Search courses or trainer"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -437,29 +311,25 @@ function OfficerDashboard({ onAddNotification, user }) {
               <TableRow>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>SUBMISSION ID</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>COURSE TITLE</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>PROVIDER</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>TRAINER</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>CATEGORY</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>DURATION</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>SUBMITTED</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>FEE</TableCell>
                 <TableCell sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>STATUS</TableCell>
-                {/* Conditionally show ACTIONS column only for admin */}
-                {isAdmin && (
-                  <TableCell align="center" sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>ACTIONS</TableCell>
-                )}
+                <TableCell align="center" sx={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>ACTIONS</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 10 : 9} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
               ) : filteredCourses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 10 : 9} align="center" sx={{ py: 4, color: '#64748b' }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 4, color: '#64748b' }}>
                     No course submissions found.
                   </TableCell>
                 </TableRow>
@@ -471,7 +341,6 @@ function OfficerDashboard({ onAddNotification, user }) {
                       <Typography variant="body2" fontWeight="600" color="#0f172a">{row.title}</Typography>
                       <Typography variant="caption" color="text.secondary">{row.level}</Typography>
                     </TableCell>
-                    <TableCell sx={{ fontSize: 13 }}>{row.provider}</TableCell>
                     <TableCell sx={{ fontSize: 13 }}>{row.trainerName || '—'}</TableCell>
                     <TableCell><Chip label={row.category} size="small" sx={{ backgroundColor: '#f1f5f9', fontWeight: 600, fontSize: 11 }} /></TableCell>
                     <TableCell sx={{ fontSize: 13 }}>{row.duration}</TableCell>
@@ -486,33 +355,35 @@ function OfficerDashboard({ onAddNotification, user }) {
                         color={row.status === 'Approved' ? 'success' : row.status === 'Rejected' ? 'error' : 'warning'}
                       />
                     </TableCell>
-                    {/* Conditionally show actions only for admin */}
-                    {isAdmin && (
-                      <TableCell align="center">
-                        {row.status === 'Pending Review' ? (
-                          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              color="success"
-                              startIcon={<CheckCircleOutlineIcon />}
-                              onClick={() => handleApproveCourse(row)}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              color="error"
-                              startIcon={<HighlightOffIcon />}
-                              onClick={() => handleOpenRejectModal(row)}
-                            >
-                              Reject
-                            </Button>
-                          </Box>
-                        ) : '—'}
-                      </TableCell>
-                    )}
+                    <TableCell align="center">
+                      {row.status === 'Pending Review' && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="primary"
+                          startIcon={<EditIcon />}
+                          onClick={() => handleOpenEdit(row)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {row.status === 'Rejected' && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="warning"
+                          startIcon={<UndoIcon />}
+                          onClick={() => handleOpenAppeal(row)}
+                        >
+                          Appeal
+                        </Button>
+                      )}
+                      {row.status === 'Approved' && (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          No action
+                        </Typography>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -521,12 +392,12 @@ function OfficerDashboard({ onAddNotification, user }) {
         </TableContainer>
       </Paper>
 
-      {/* ---- Trainers Table (only for Admin & TrainingProvider) ---- */}
-      {user && (user.usertype === 'Admin' || user.usertype === 'TrainingProvider' || user.usertype === 'RightSkills') && (
+      {/* ---- Trainers Table ---- */}
+      {showTrainers && (
         <Paper elevation={0} sx={{ mt: 4, border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
           <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9' }}>
             <Typography variant="h6" fontWeight="700">
-              {user.usertype === 'RightSkills' || user.usertype === 'Admin' ? 'All Training Providers & Their Trainers' : 'My Trainers'}
+              My Trainers
             </Typography>
           </Box>
 
@@ -538,22 +409,13 @@ function OfficerDashboard({ onAddNotification, user }) {
                   <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Email</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Qualifications</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Certification</TableCell>
-                  {(user.usertype === 'RightSkills' || user.usertype === 'Admin') && (
-                    <TableCell sx={{ fontWeight: 700, color: '#64748b' }}>Provider</TableCell>
-                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loadingTrainers ? (
                   <TableRow>
-                    <TableCell colSpan={(user.usertype === 'RightSkills' || user.usertype === 'Admin') ? 5 : 4} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                       <CircularProgress size={32} />
-                    </TableCell>
-                  </TableRow>
-                ) : trainers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={(user.usertype === 'RightSkills' || user.usertype === 'Admin') ? 5 : 4} align="center" sx={{ py: 4, color: '#64748b' }}>
-                      No trainers found.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -563,9 +425,6 @@ function OfficerDashboard({ onAddNotification, user }) {
                       <TableCell>{trainer.email || '—'}</TableCell>
                       <TableCell>{trainer.qualifications || '—'}</TableCell>
                       <TableCell>{trainer.certification || '—'}</TableCell>
-                      {(user.usertype === 'RightSkills' || user.usertype === 'Admin') && (
-                        <TableCell>{trainer.providerName || 'Unassigned'}</TableCell>
-                      )}
                     </TableRow>
                   ))
                 )}
@@ -575,72 +434,16 @@ function OfficerDashboard({ onAddNotification, user }) {
         </Paper>
       )}
 
-      {/* ---- Rejection Modal (only for admin) ---- */}
-      {isAdmin && (
-        <Dialog
-          open={Boolean(selectedCourse)}
-          onClose={handleCloseRejectModal}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
-        >
-          <DialogTitle sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', pb: 1 }}>
-            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-              <Box sx={{ backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '50%', p: 1, display: 'flex' }}>
-                <HighlightOffOutlinedIcon sx={{ fontSize: 24 }} />
-              </Box>
-              <Box>
-                <Typography variant="h6" fontWeight="700" sx={{ lineHeight: 1.2 }}>
-                  Reject Course Submission
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                  {selectedCourse?.id}
-                </Typography>
-              </Box>
-            </Box>
-            <IconButton size="small" onClick={handleCloseRejectModal} sx={{ color: '#94a3b8' }}>
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </DialogTitle>
-
-          <DialogContent sx={{ pt: 1 }}>
-            <Paper elevation={0} sx={{ backgroundColor: '#eef2ff', p: 2, borderRadius: 2, mb: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" display="block">Course</Typography>
-              <Typography variant="subtitle2" fontWeight="700" color="#1e293b">{selectedCourse?.title}</Typography>
-              <Typography variant="caption" color="text.secondary">{selectedCourse?.provider}</Typography>
-            </Paper>
-
-            <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>
-              Reason for rejection <Typography component="span" color="error">*</Typography>
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Provide a clear explanation of why this submission is being rejected..."
-              value={rejectionReason}
-              onChange={(e) => {
-                setRejectionReason(e.target.value);
-                if (e.target.value.trim()) setReasonError(false);
-              }}
-              error={reasonError}
-              helperText={reasonError ? 'A reason is required to reject this submission.' : ''}
-              sx={{ backgroundColor: '#f8fafc', borderRadius: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-            />
-          </DialogContent>
-
-          <DialogActions sx={{ p: 2, pt: 1, gap: 1 }}>
-            <Button variant="outlined" onClick={handleCloseRejectModal} sx={{ textTransform: 'none', borderRadius: 2, px: 2.5 }}>
-              Cancel
-            </Button>
-            <Button variant="contained" color="error" startIcon={<HighlightOffIcon />} onClick={handleConfirmRejection} sx={{ textTransform: 'none', borderRadius: 2, px: 2.5, backgroundColor: '#dc2626', fontWeight: '600' }}>
-              Confirm Rejection
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
+      {/* ---- Edit / Appeal Modal ---- */}
+      <EditCourseModal
+        open={editModalOpen}
+        course={editingCourse}
+        onClose={handleCloseEdit}
+        onUpdate={fetchCourses}
+        isAppeal={isAppeal}
+      />
     </Box>
   );
 }
 
-export default OfficerDashboard;
+export default ProviderDashboard;
