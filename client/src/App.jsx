@@ -112,12 +112,8 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
                             <Link to="/courses" style={{ textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Typography fontWeight="500">COURSES</Typography>
               </Link>
-            </Box>
-          {user && (
-            <Link to="/" style={{ textDecoration: 'none', color: 'white', marginRight: '16px' }}>
-              <Typography fontWeight="500">Registration</Typography>
-            </Link>
-          )}
+            </Box>)}
+
 
           {isProvider && (
             <Box sx={{ display: 'flex', gap: 3 }}>
@@ -131,17 +127,6 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
             
           )}
 
-          {isProvider && (
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              <Link to="/provider-dashboard" style={{ color: 'white', textDecoration: 'none' }}>
-                <Typography fontWeight="500">HOME</Typography>
-              </Link>
-                            <Link to="/courses" style={{ textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Typography fontWeight="500">COURSES</Typography>
-              </Link>
-            </Box>
-            
-          )}
 
           {isOfficer && (
             <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>

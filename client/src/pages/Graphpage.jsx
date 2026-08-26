@@ -32,23 +32,19 @@ import PersonIcon from '@mui/icons-material/Person';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom'; // added useParams
 
 const API_BASE_URL = 'http://localhost:3001';
 
 // ----- Nicer colour palette -----
 const STATUS_COLORS = {
-  // Provider
-  Active: '#4CAF50',       // green
-  Inactive: '#F44336',     // red
-  // Trainer
-  Valid: '#2196F3',        // blue
-  Expired: '#FF9800',      // orange
-  // Course
-  Approved: '#8BC34A',     // light green
-  Rejected: '#E91E63',     // pink
-  'Pending Review': '#FFC107', // amber
-  // Fallback
+  Active: '#4CAF50',
+  Inactive: '#F44336',
+  Valid: '#2196F3',
+  Expired: '#FF9800',
+  Approved: '#8BC34A',
+  Rejected: '#E91E63',
+  'Pending Review': '#FFC107',
   Unknown: '#9E9E9E',
   Pending: '#FFC107',
 };
@@ -81,7 +77,7 @@ const getNodeColor = (node) => {
   return STATUS_COLORS.Unknown;
 };
 
-// ----- Custom Nodes (with nicer styling) -----
+// ----- Custom Nodes (unchanged) -----
 const ProviderNode = ({ data }) => {
   const color = data.color || '#1976d2';
   return (
@@ -208,6 +204,7 @@ const layoutGraph = (nodes, edges, rootId = null) => {
 // ----- Main Graph Page -----
 function GraphPage() {
   const navigate = useNavigate();
+  const { userId } = useParams(); // get userId from route
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -246,24 +243,64 @@ function GraphPage() {
       if (!coursesRes.ok) throw new Error('Failed to fetch courses');
       const courses = await coursesRes.json();
 
+      // If a userId is provided, filter to that specific trainer
+      let filteredTrainers = trainers;
+      let targetTrainer = null;
+      if (userId) {
+        // Find the trainer by matching id, userId, or trainerId
+        targetTrainer = trainers.find(
+          (t) =>
+            String(t.id) === userId ||
+            String(t.userId) === userId ||
+            String(t.trainerId) === userId
+        );
+        if (!targetTrainer) {
+          throw new Error(`Trainer with ID ${userId} not found`);
+        }
+        filteredTrainers = [targetTrainer];
+      }
+
       const nodeMap = {};
       const edgeList = [];
 
-      // Group trainers by provider
+      // Group trainers by provider (only if we are in full mode or trainer has provider)
       const providerMap = {};
-      trainers.forEach((t) => {
+      filteredTrainers.forEach((t) => {
         const trainerIdValue = t.trainerId ?? t.userId ?? t.id;
         if (!trainerIdValue) {
           console.warn('Trainer missing any ID, skipping:', t);
           return;
         }
         const trainerId = `trainer-${trainerIdValue}`;
-        const providerName = t.providerName || 'Freelance';
-        if (!providerMap[providerName]) providerMap[providerName] = [];
-        providerMap[providerName].push({ ...t, _trainerId: trainerId });
+        const providerName = t.providerName || null;
+
+        // If userId is provided, we may or may not create a provider node
+        if (userId) {
+          // Single user mode: only create provider node if providerName exists
+          if (providerName) {
+            if (!providerMap[providerName]) providerMap[providerName] = [];
+            providerMap[providerName].push({ ...t, _trainerId: trainerId });
+          } else {
+            // No provider: just add trainer directly
+            nodeMap[trainerId] = {
+              id: trainerId,
+              type: 'trainer',
+              data: {
+                label: t.name || 'Unknown',
+                email: t.email || '',
+                certificationValidity: t.certificationValidity || null,
+              },
+            };
+          }
+        } else {
+          // Full mode: always group by provider (use 'Freelance' if missing)
+          const groupKey = providerName || 'Freelance';
+          if (!providerMap[groupKey]) providerMap[groupKey] = [];
+          providerMap[groupKey].push({ ...t, _trainerId: trainerId });
+        }
       });
 
-      // Provider nodes
+      // Create provider nodes and edges (if any)
       Object.entries(providerMap).forEach(([providerName, trainerList]) => {
         const providerId = `provider-${providerName.replace(/\s/g, '-')}`;
         nodeMap[providerId] = {
@@ -296,9 +333,17 @@ function GraphPage() {
         });
       });
 
-      // Course nodes – enforce "one trainer per course" (deduplicate)
-      const courseTrainerMap = {}; // courseId -> trainerId (first encountered)
-      courses.forEach((course) => {
+      // Filter courses: if userId is provided, only include courses of that trainer
+      const filteredCourses = userId
+        ? courses.filter((c) => {
+            const trainerIdMatch = String(c.TrainerId) === userId;
+            return trainerIdMatch;
+          })
+        : courses;
+
+      // Course nodes – enforce "one trainer per course"
+      const courseTrainerMap = {};
+      filteredCourses.forEach((course) => {
         const courseId = `course-${course.id || course.CourseID}`;
         if (!nodeMap[courseId]) {
           const status = course.status || course.SubmissionStatus || 'Pending Review';
@@ -342,13 +387,22 @@ function GraphPage() {
 
       setBaseNodes(nodeArray);
       setBaseEdges(validEdgeList);
+
+      // Set initial rootId for single user mode
+      if (userId && targetTrainer) {
+        const trainerId = `trainer-${targetTrainer.trainerId ?? targetTrainer.userId ?? targetTrainer.id}`;
+        // If there is a provider, we could set root to provider, but let's set to trainer for clarity
+        setRootId(trainerId);
+      } else {
+        setRootId(null);
+      }
     } catch (err) {
       console.error('Graph data fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // Initial fetch
   useEffect(() => {
@@ -360,7 +414,7 @@ function GraphPage() {
     applyLayout();
   }, [applyLayout]);
 
-  // Search filtering
+  // Search filtering (unchanged)
   useEffect(() => {
     if (fullNodes.length === 0) {
       setNodes([]);
@@ -388,8 +442,6 @@ function GraphPage() {
       if (matchedIds.includes(e.source)) connectedIds.add(e.target);
       if (matchedIds.includes(e.target)) connectedIds.add(e.source);
     });
-    // second level
-
 
     const filteredNodes = fullNodes.filter((n) => connectedIds.has(n.id));
     const filteredEdges = fullEdges.filter(
@@ -400,13 +452,11 @@ function GraphPage() {
     setEdges(filteredEdges);
   }, [searchTerm, fullNodes, fullEdges]);
 
-  // ----- Connection validation (enforce one trainer per course) -----
+  // ----- Connection validation (unchanged) -----
   const onConnect = useCallback(
     (params) => {
-      // Check if target is a course and already has an incoming edge from a trainer
       const targetNode = fullNodes.find((n) => n.id === params.target);
       if (targetNode && targetNode.type === 'course') {
-        // Count existing incoming edges to this course from any trainer
         const existingIncoming = fullEdges.filter(
           (e) => e.target === params.target && e.source.startsWith('trainer-')
         );
@@ -415,18 +465,12 @@ function GraphPage() {
           return;
         }
       }
-      // Also prevent connecting anything else (e.g., course -> something) if needed
-      // We'll just allow any connection that passes the course rule.
       setEdges((eds) => addEdge(params, eds));
     },
     [fullNodes, fullEdges, setEdges]
   );
 
-  // Allow edge deletion
-  const onEdgesDelete = useCallback((deletedEdges) => {
-    // We can let user delete any edge
-    // Optionally add confirmation or restrict
-  }, []);
+  const onEdgesDelete = useCallback((deletedEdges) => {}, []);
 
   const onNodeClick = useCallback((event, node) => {
     setRootId(node.id);
@@ -453,15 +497,22 @@ function GraphPage() {
     );
   }
 
+  // Determine if we're in single-user mode
+  const isSingleUser = !!userId;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', justifyContent: 'center' }}>
       <Box sx={{ width: '95%', maxWidth: 1400, height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
-        {/* Compact AppBar without title */}
         <AppBar position="static" color="default" elevation={1} sx={{ borderBottom: '1px solid #e2e8f0', borderRadius: 1 }}>
           <Toolbar variant="dense" sx={{ gap: 1, flexWrap: 'wrap', minHeight: 40, px: 1.5 }}>
             <IconButton edge="start" onClick={() => navigate('/officer-dashboard')} color="inherit" size="small">
               <ArrowBackIcon fontSize="small" />
             </IconButton>
+            {isSingleUser && (
+              <Typography variant="body2" sx={{ fontWeight: 500, ml: 1 }}>
+                Trainer: {baseNodes.find(n => n.type === 'trainer')?.data?.label || userId}
+              </Typography>
+            )}
             {rootId && (
               <Button
                 variant="outlined"
@@ -499,7 +550,6 @@ function GraphPage() {
           </Toolbar>
         </AppBar>
 
-        {/* Graph container – fills remaining height */}
         <Box sx={{ flex: 1, position: 'relative', mt: 1, borderRadius: 2, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
           <ReactFlow
             nodes={nodes}
@@ -523,7 +573,6 @@ function GraphPage() {
             />
           </ReactFlow>
 
-          {/* Legend – updated with nicer colors */}
           <Paper
             elevation={2}
             sx={{

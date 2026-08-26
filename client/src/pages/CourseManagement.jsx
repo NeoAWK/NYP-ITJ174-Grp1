@@ -446,14 +446,17 @@ const navigate = useNavigate();
             >
               Sort
             </Button>
-            <Button
-              variant="outlined"
-              startIcon={<BarChartIcon />}   // or AnalyticsIcon, TimelineIcon, etc.
-              onClick={() => navigate('/graph')}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Graph
-            </Button>
+            
+{userType !== 'Trainer' && (
+  <Button
+    variant="outlined"
+    startIcon={<BarChartIcon />}
+    onClick={() => navigate('/graph')}
+    sx={{ textTransform: 'none', fontWeight: 600 }}
+  >
+    Graph
+  </Button>
+)}
             <Menu
               id="sort-menu"
               anchorEl={anchorEl}

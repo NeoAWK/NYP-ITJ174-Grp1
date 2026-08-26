@@ -320,7 +320,6 @@ async function ensureTrainerProfileColumns(db) {
 
 // Database Connection & Boot Routine
 const db = require('./models');
-const seedCoursesAndModules = require('./seedCourses');
 
 const syncOptions = db.sequelize.getDialect() === 'sqlite' ? {} : { alter: true };
 db.sequelize.sync(syncOptions)
@@ -340,11 +339,7 @@ db.sequelize.sync(syncOptions)
   .then(() => {
     return ensureTestTrainerAccount(db);
   })
-  .then(() => {
-    if (typeof seedCoursesAndModules === 'function') {
-      return seedCoursesAndModules(db);
-    }
-  })
+ 
   .then(() => {
     registerDatabaseRoutes();
     startServer();

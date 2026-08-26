@@ -11,20 +11,7 @@ module.exports = (sequelize, DataTypes) => {
             onDelete: 'CASCADE',
             onUpdate: 'CASCADE'
         },
-        // -- Registration fields (RegisterLearner.jsx) --
-        name: { 
-            type: DataTypes.STRING(100), 
-            allowNull: true 
-        },
-        email: { 
-            type: DataTypes.STRING(255), 
-            allowNull: true,
-            validate: { isEmail: true }
-        },
-        mobileNo: { 
-            type: DataTypes.STRING(8), 
-            allowNull: true 
-        },
+        // -- Registration fields (RegisterLearner.jsx) -
         educationQualification: { 
             type: DataTypes.STRING(50), 
             allowNull: true 

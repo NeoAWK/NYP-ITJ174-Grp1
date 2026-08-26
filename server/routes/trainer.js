@@ -14,26 +14,21 @@ router.get('/', validateToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Build include for trainer_profiles
+    // Always include user and provider associations
     const include = [
       {
         model: db.User,
-        as: 'user',        // alias referencing the trainer's user account
+        as: 'user',
         attributes: ['id', 'name', 'email']
-      }
-    ]; 
-
-    // If admin, also include provider info (the training provider who owns the trainer)
-    if (user.usertype === 'RightSkills') {
-      include.push({
+      },
+      {
         model: db.User,
-        as: 'provider',    // alias for the provider user
-        attributes: ['id', 'name'],
-        order: ["Provider"]
-      });
-    }
+        as: 'provider',
+        attributes: ['id', 'name']
+      }
+    ];
 
-    // Build where clause: for TrainingProvider, filter by providerId = user.id
+    // For TrainingProvider, restrict to their own trainers
     const where = {};
     if (user.usertype === 'TrainingProvider') {
       where.providerId = user.id;
@@ -44,20 +39,32 @@ router.get('/', validateToken, async (req, res) => {
       include
     });
 
-    // Format response
     const formatted = trainerProfiles.map(tp => {
-      const result = {
-        trainerId: tp.userId,
+      // Provider name: fallback to 'Freelance' if none
+      const providerName = tp.provider ? tp.provider.name : 'Freelance';
+
+      // Determine certification validity date
+      let certificationValidity = null;
+      // Try to get from model fields (order: certificationValidity, then certification)
+      const certField = tp.certificationValidity || tp.certification;
+      if (certField) {
+        const date = new Date(certField);
+        if (!isNaN(date.getTime())) {
+          certificationValidity = date.toISOString(); // or keep as date object
+        }
+      }
+
+      return {
+        trainerId: tp.userId,          // primary identifier used by the graph
         name: tp.user ? tp.user.name : 'Unknown',
         email: tp.user ? tp.user.email : '',
+        providerName: providerName,
+        certificationValidity: certificationValidity,
+        // Optional: include other fields if needed
         qualifications: tp.qualifications || null,
         certification: tp.certification || null,
         experience: tp.experience || null,
       };
-      if (user.usertype === 'RightSkills') {
-         result.providerName = tp.providerId ? tp.provider.name : 'Freelance';
-      }
-      return result;
     });
 
     res.json(formatted);

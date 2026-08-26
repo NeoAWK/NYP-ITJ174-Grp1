@@ -12,13 +12,6 @@ module.exports = (sequelize, DataTypes) => {
             onUpdate: 'CASCADE'
         },
         // -- Registration fields (RegisterProvider.jsx) --
-        name: { 
-            type: DataTypes.STRING(100), 
-            allowNull: true,
-            field: 'Name' // Maps JavaScript 'name' property to SQL column 'Name'
-        },
-        emailAddress: { type: DataTypes.STRING(100), allowNull: true }, // shared with teammate's field of the same name
-        mobileNo: { type: DataTypes.STRING(20), allowNull: true },
         companyRegistrationId: { type: DataTypes.STRING(50), allowNull: true }, // shared with teammate's field of the same name
         companyAddress: { type: DataTypes.STRING(120), allowNull: true },
         postalCode: { type: DataTypes.STRING(20), allowNull: true },
