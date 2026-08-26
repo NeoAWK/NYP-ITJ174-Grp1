@@ -25,11 +25,11 @@ const sendVerificationEmail = async (email, token) => {
     const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
 
     await transporter.sendMail({
-        from: `\"${process.env.EMAIL_FROM_NAME}\" <${process.env.EMAIL_FROM_ADDRESS}>`,
+        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`,
         to: email,
         subject: "Verify your email",
         html: `<p>Please click the link below to verify your email:</p>
-               <a href=\"${verificationUrl}\">${verificationUrl}</a>`
+               <a href="${verificationUrl}">${verificationUrl}</a>`
     });
 };
 
@@ -136,35 +136,113 @@ router.put("/update", validateToken, async (req, res) => {
 router.get("/ecosystem-profile", validateToken, async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id);
-        let profileData = { user: { id: user.id, name: user.name, usertype: user.usertype }, details: null };
 
-        if (user.usertype === 'Training Provider') {
-            profileData.details = await TrainingProvider.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } }).then(([rec]) => rec);
-        } else if (user.usertype === 'Trainer') {
-            profileData.details = await TrainerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } }).then(([rec]) => rec);
-        } else if (user.usertype === 'Learner') {
-            profileData.details = await LearnerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } }).then(([rec]) => rec);
-        }
-        res.json(profileData);
+        // Every user can independently hold a Training Provider, Trainer, and/or
+        // Learner registration at the same time. Ensure all three rows exist
+        // (findOrCreate) and return them all under "profiles", keyed by role,
+        // so status can be checked per-role regardless of which one is currently
+        // "active" (user.usertype).
+        const [trainingProviderProfile] = await TrainingProvider.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } });
+        const [trainerProfile] = await TrainerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } });
+        const [learnerProfile] = await LearnerProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } });
+
+        // "details" kept for backward compatibility — mirrors whichever profile
+        // matches the user's current usertype, same as before this change.
+        let details = null;
+        if (user.usertype === 'Training Provider') details = trainingProviderProfile;
+        else if (user.usertype === 'Trainer') details = trainerProfile;
+        else if (user.usertype === 'Learner') details = learnerProfile;
+
+        res.json({
+            user: { id: user.id, name: user.name, usertype: user.usertype },
+            details,
+            profiles: {
+                trainingProvider: trainingProviderProfile,
+                trainer: trainerProfile,
+                learner: learnerProfile
+            }
+        });
     } catch (err) {
         res.status(500).json({ message: "Error fetching profiles", error: err });
     }
 });
 
 // PUT: Upsert Ecosystem Profile Extensions
+// Uses an explicit "role" sent by the registration form to decide which
+// profile table to write to, and promotes the user's usertype to match.
+// Falls back to companyRegistrationId detection, then the user's current
+// usertype, for any older frontend calls that don't send "role".
 router.put("/ecosystem-profile", validateToken, async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id);
-        if (user.usertype === 'Training Provider') {
-            await TrainingProvider.upsert({ userId: user.id, ...req.body });
-        } else if (user.usertype === 'Trainer') {
-            await TrainerProfile.upsert({ userId: user.id, ...req.body });
-        } else if (user.usertype === 'Learner') {
-            await LearnerProfile.upsert({ userId: user.id, ...req.body });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
         }
-        res.json({ message: "Ecosystem details saved." });
+
+        const role = req.body.role
+            || (req.body.companyRegistrationId ? 'Training Provider' : user.usertype);
+
+        if (role === 'Training Provider') {
+            if (user.usertype !== 'Training Provider') {
+                await user.update({ usertype: 'Training Provider' });
+            }
+
+            await TrainingProvider.upsert({
+                userId: user.id,
+                name: req.body.name,
+                emailAddress: req.body.emailAddress,
+                mobileNo: req.body.mobileNo,
+                companyRegistrationId: req.body.companyRegistrationId,
+                companyAddress: req.body.companyAddress,
+                postalCode: req.body.postalCode,
+                companyWebsite: req.body.companyWebsite,
+                mainFieldOfTraining: req.body.mainFieldOfTraining,
+                proofOfCertification: req.body.proofOfCertification
+            });
+
+            return res.json({ message: "Training Provider details submitted successfully!" });
+        }
+
+        if (role === 'Trainer') {
+            if (user.usertype !== 'Trainer') {
+                await user.update({ usertype: 'Trainer' });
+            }
+
+            await TrainerProfile.upsert({
+                userId: user.id,
+                name: req.body.name,
+                emailAddress: req.body.emailAddress,
+                mobileNo: req.body.mobileNo,
+                areasOfExpertise: req.body.areasOfExpertise,
+                resumeExperience: req.body.resumeExperience
+            });
+
+            return res.json({ message: "Trainer details saved successfully!" });
+        }
+
+        if (role === 'Learner') {
+            if (user.usertype !== 'Learner') {
+                await user.update({ usertype: 'Learner' });
+            }
+
+            await LearnerProfile.upsert({
+                userId: user.id,
+                name: req.body.name,
+                email: req.body.email || req.body.emailAddress,
+                mobileNo: req.body.mobileNo,
+                educationQualification: req.body.educationQualification,
+                areaOfInterest: req.body.areaOfInterest,
+                attachment: req.body.attachment
+            });
+
+            return res.json({ message: "Learner details saved successfully!" });
+        }
+
+        res.status(400).json({ message: "Invalid user type." });
     } catch (err) {
-        res.status(400).json({ message: "Save failed.", error: err });
+        console.error("Ecosystem profile error:", err);
+        res.status(500).json({ message: "Save failed.", error: err.message });
     }
 });
 // GET all users

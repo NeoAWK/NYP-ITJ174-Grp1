@@ -1,47 +1,331 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, TextField, Button, FormControlLabel, Checkbox, CircularProgress } from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+    Box, 
+    Typography, 
+    TextField, 
+    Button, 
+    CircularProgress, 
+    FormControl, 
+    InputLabel, 
+    Select, 
+    MenuItem, 
+    FormHelperText,
+    Chip
+} from '@mui/material';
 import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import http from '../http';
 import { ToastContainer, toast } from 'react-toastify';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
+const educationOptions = [
+    "N Level",
+    "O Level",
+    "A Level",
+    "Diploma",
+    "Degree"
+];
+
+const interestOptions = [
+    "Information Technology",
+    "Business and Administration",
+    "Engineering and Manufacturing",
+    "Architecture, Building, and Real Estate",
+    "Health and Social Sciences",
+    "Services and Trades"
+];
+
 function RegisterLearner() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const editMode = Boolean(location.state?.editMode);
     const [loading, setLoading] = useState(true);
+    const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
     useEffect(() => {
-        http.get("/user/ecosystem-profile").then((res) => {
-            if(res.data.details) formik.setValues(res.data.details);
+        const fetchData = async () => {
+            let name = '';
+            let email = '';
+
+            // 1. Get the registered account's name/email (read-only source of truth)
+            try {
+                const authRes = await http.get("/user/auth");
+                if (authRes.data) {
+                    const user = authRes.data.user || authRes.data;
+                    name = user.name || '';
+                    email = user.email || '';
+                }
+            } catch (err) {
+                console.error("Failed to fetch authenticated user", err);
+            }
+
+            // 2. Layer in any previously-saved learner profile details
+            //    (checked independently of the account's current active usertype,
+            //    since a user can hold multiple role registrations at once)
+            try {
+                const profileRes = await http.get("/user/ecosystem-profile");
+                const learnerProfile = profileRes.data.profiles?.learner;
+                if (learnerProfile && learnerProfile.name) {
+                    setAlreadyRegistered(true);
+                }
+                formik.setValues({
+                    name: name,
+                    email: email,
+                    mobileNo: learnerProfile?.mobileNo || '',
+                    educationQualification: learnerProfile?.educationQualification || '',
+                    areaOfInterest: learnerProfile?.areaOfInterest || '',
+                    attachment: learnerProfile?.attachment || ''
+                });
+            } catch (err) {
+                formik.setValues({
+                    name: name,
+                    email: email,
+                    mobileNo: '',
+                    educationQualification: '',
+                    areaOfInterest: '',
+                    attachment: ''
+                });
+            }
+
             setLoading(false);
-        }).catch(() => setLoading(false));
+        };
+
+        fetchData();
     }, []);
 
+    const validationSchema = Yup.object({
+        name: Yup.string().max(100, 'Max 100 characters').required('Name is required'),
+        email: Yup.string().email('Invalid email address').required('Email is required'),
+        mobileNo: Yup.string()
+            .matches(/^[0-9]{8}$/, 'Must be exactly 8 digits')
+            .required('Mobile number is required'),
+        educationQualification: Yup.string().required('Education qualification is required'),
+        areaOfInterest: Yup.string().required('Area of interest is required'),
+        attachment: Yup.string().nullable()
+    });
+
     const formik = useFormik({
-        initialValues: { enrolledCourse: '', moduleHours: 0, notStarted: true, inProgress: false, completed: false },
-        onSubmit: (data) => {
-            http.put("/user/ecosystem-profile", data).then(() => {
-                toast.success("Learner course tracking saved!");
+        initialValues: {
+            name: '',
+            email: '',
+            mobileNo: '',
+            educationQualification: '',
+            areaOfInterest: '',
+            attachment: ''
+        },
+        validationSchema,
+        onSubmit: (values) => {
+            const payload = {
+                role: 'Learner',
+                name: values.name,
+                email: values.email,
+                mobileNo: values.mobileNo,
+                educationQualification: values.educationQualification,
+                areaOfInterest: values.areaOfInterest,
+                attachment: values.attachment // filename string returned by /file/upload
+            };
+
+            http.put("/user/ecosystem-profile", payload).then(() => {
+                toast.success(alreadyRegistered ? "Learner registration details updated successfully!" : "Learner registration details saved successfully!");
+                navigate('/learner-details', { state: { learnerData: { ...payload, status: 'Registered' } } });
+            }).catch((err) => {
+                toast.error(err.response?.data?.message || "Failed to save registration details.");
             });
         }
     });
 
     if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 5 }} />;
 
+    if (alreadyRegistered && !editMode) {
+        return (
+            <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, mb: 4, p: 2, textAlign: 'center' }}>
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                    Learner Registration Page
+                </Typography>
+                <Chip
+                    label="Registered"
+                    color="success"
+                    sx={{ fontWeight: 'bold', fontSize: '0.9rem', my: 2 }}
+                />
+                <Typography sx={{ mb: 3 }}>
+                    You have already submitted a Learner registration and cannot resubmit it.
+                </Typography>
+                <Button variant="contained" onClick={() => navigate('/learner-details')}>
+                    View My Registration
+                </Button>
+            </Box>
+        );
+    }
+
     return (
-        <Box sx={{ maxWidth: 600, mx: 'auto', mt: 5 }}>
-            <Typography variant="h5" gutterBottom>Learner Academic Tracking Profile</Typography>
+        <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, mb: 4, p: 2 }}>
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+                Learner Registration Page
+            </Typography>
+
+            {editMode && (
+                <Box sx={{ mb: 2 }}>
+                    <Chip
+                        label="Registered"
+                        color="success"
+                        sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        You're updating your existing Learner registration.
+                    </Typography>
+                </Box>
+            )}
+
+            <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 'bold' }}>
+                Learner Details
+            </Typography>
+
             <form onSubmit={formik.handleSubmit}>
-                <TextField fullWidth margin="dense" label="Enrolled Course" name="enrolledCourse" value={formik.values.enrolledCourse} onChange={formik.handleChange} />
-                <TextField fullWidth margin="dense" label="Module Hours" name="moduleHours" type="number" value={formik.values.moduleHours} onChange={formik.handleChange} />
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                    <FormControlLabel control={<Checkbox name="notStarted" checked={formik.values.notStarted} onChange={formik.handleChange} />} label="Not Started" />
-                    <FormControlLabel control={<Checkbox name="inProgress" checked={formik.values.inProgress} onChange={formik.handleChange} />} label="In Progress" />
-                    <FormControlLabel control={<Checkbox name="completed" checked={formik.values.completed} onChange={formik.handleChange} />} label="Completed" />
+                <TextField
+                    fullWidth
+                    margin="dense"
+                    label="Name"
+                    name="name"
+                    value={formik.values.name}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    disabled
+                    InputLabelProps={{ shrink: true }}
+                    error={formik.touched.name && Boolean(formik.errors.name)}
+                    helperText={formik.touched.name && formik.errors.name}
+                />
+
+                <TextField
+                    fullWidth
+                    margin="dense"
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    value={formik.values.email}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    disabled
+                    InputLabelProps={{ shrink: true }}
+                    error={formik.touched.email && Boolean(formik.errors.email)}
+                    helperText={formik.touched.email && formik.errors.email}
+                />
+
+                <TextField
+                    fullWidth
+                    margin="dense"
+                    label="Mobile No."
+                    name="mobileNo"
+                    value={formik.values.mobileNo}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    error={formik.touched.mobileNo && Boolean(formik.errors.mobileNo)}
+                    helperText={formik.touched.mobileNo && formik.errors.mobileNo}
+                />
+
+                <FormControl 
+                    fullWidth 
+                    margin="dense" 
+                    error={formik.touched.educationQualification && Boolean(formik.errors.educationQualification)}
+                >
+                    <InputLabel id="education-label">Education Qualification</InputLabel>
+                    <Select
+                        labelId="education-label"
+                        name="educationQualification"
+                        value={formik.values.educationQualification}
+                        label="Education Qualification"
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                    >
+                        {educationOptions.map((option) => (
+                            <MenuItem key={option} value={option}>
+                                {option}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                    {formik.touched.educationQualification && formik.errors.educationQualification && (
+                        <FormHelperText>{formik.errors.educationQualification}</FormHelperText>
+                    )}
+                </FormControl>
+
+                <FormControl 
+                    fullWidth 
+                    margin="dense" 
+                    error={formik.touched.areaOfInterest && Boolean(formik.errors.areaOfInterest)}
+                >
+                    <InputLabel id="interest-label">Areas of Interest</InputLabel>
+                    <Select
+                        labelId="interest-label"
+                        name="areaOfInterest"
+                        value={formik.values.areaOfInterest}
+                        label="Areas of Interest"
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                    >
+                        {interestOptions.map((option) => (
+                            <MenuItem key={option} value={option}>
+                                {option}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                    {formik.touched.areaOfInterest && formik.errors.areaOfInterest && (
+                        <FormHelperText>{formik.errors.areaOfInterest}</FormHelperText>
+                    )}
+                </FormControl>
+
+                <Box sx={{ mt: 2, mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                        Attachment of Qualification (Max 10MB)
+                    </Typography>
+                    <Button variant="outlined" component="label" fullWidth>
+                        {formik.values.attachment ? formik.values.attachment : "Upload File"}
+                        <input
+                            type="file"
+                            hidden
+                            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                            onChange={(event) => {
+                                const file = event.currentTarget.files[0];
+                                if (!file) return;
+
+                                if (file.size > MAX_FILE_SIZE) {
+                                    toast.error("File size must be 10MB or less");
+                                    return;
+                                }
+
+                                const uploadData = new FormData();
+                                uploadData.append('file', file);
+
+                                http.post('/file/upload', uploadData, {
+                                    headers: { 'Content-Type': 'multipart/form-data' }
+                                }).then((res) => {
+                                    formik.setFieldValue("attachment", res.data.filename);
+                                }).catch(() => {
+                                    toast.error("File upload failed.");
+                                });
+                            }}
+                        />
+                    </Button>
+                    {formik.touched.attachment && formik.errors.attachment && (
+                        <Typography color="error" variant="caption" sx={{ mt: 0.5, display: 'block' }}>
+                            {formik.errors.attachment}
+                        </Typography>
+                    )}
                 </Box>
 
-                <Button variant="contained" type="submit" sx={{ mt: 2 }}>Save Registration Info</Button>
+                <Button 
+                    variant="contained" 
+                    type="submit" 
+                    color="primary" 
+                    fullWidth 
+                    sx={{ mt: 3 }}
+                >
+                    {alreadyRegistered ? 'Update Registration Info' : 'Save Registration Info'}
+                </Button>
             </form>
             <ToastContainer />
         </Box>
     );
 }
+
 export default RegisterLearner;

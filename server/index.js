@@ -257,19 +257,19 @@ async function ensureAdminLogs(db) {
 }
 
 async function ensureTestTrainerAccount(db) {
-  const trainerDetails = {
-    id: 2001,
-    name: 'Test Trainer',
-    email: 'test.trainer@rightskills.local',
-    password: 'TrainerPass123!',
-    isVerified: true,
-    usertype: 'Trainer'
-  };
-  const passwordHash = await bcrypt.hash(trainerDetails.password, 10);
-  const [trainer, created] = await db.User.findOrCreate({
-    where: { id: trainerDetails.id },
-    defaults: { ...trainerDetails, password: passwordHash }
-  });
+    const trainerDetails = {
+        id: 2001,
+        name: 'Test Trainer',
+        email: 'test.trainer@rightskills.local',
+        password: 'P@ssw0rd',
+        isVerified: true,
+        usertype: 'Trainer'
+    };
+    const passwordHash = await bcrypt.hash(trainerDetails.password, 10);
+    const [trainer, created] = await db.User.findOrCreate({
+        where: { id: trainerDetails.id },
+        defaults: { ...trainerDetails, password: passwordHash }
+    });
 
   if (!created) {
     await trainer.update({
