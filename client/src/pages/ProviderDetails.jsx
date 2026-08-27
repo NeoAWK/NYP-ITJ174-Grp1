@@ -51,8 +51,8 @@ function ProviderDetails() {
                     </Typography>
                     
                     <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid item xs={6}><strong>Name:</strong> {details.name}</Grid>
-                        <Grid item xs={6}><strong>Email Address:</strong> {details.emailAddress}</Grid>
+                        <Grid item xs={6}><strong>Name:</strong> {user.name}</Grid>
+                        <Grid item xs={6}><strong>Email Address:</strong> {user.emailAddress}</Grid>
                         <Grid item xs={6}><strong>Mobile No:</strong> {details.mobileNo}</Grid>
                         <Grid item xs={6}><strong>UEN Number:</strong> {details.companyRegistrationId}</Grid>
                         <Grid item xs={6}><strong>Company Website:</strong> {details.companyWebsite}</Grid>

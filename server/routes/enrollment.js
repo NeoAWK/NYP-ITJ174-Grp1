@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Enrollment, Course } = require('../models');
+const { Enrollment, Course, User } = require('../models');
 const { validateToken } = require('../middlewares/auth');
 
 // POST /enrollment/enroll
@@ -59,6 +59,32 @@ router.get('/my-courses', validateToken, async (req, res) => {
   } catch (err) {
     console.error('Fetch detailed enrollments error:', err);
     return res.status(500).json({ error: 'Failed to fetch enrolled courses.' });
+  }
+});
+
+router.get('/all',  async (req, res) => {
+  try {
+    // Restrict to officers/admins (adjust role names as needed)
+
+    const enrollments = await Enrollment.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user',          // must match the alias defined in the association
+          attributes: ['id', 'name', 'email', 'usertype'],
+        },
+        {
+          model: Course,
+          as: 'course',
+          attributes: ['CourseID', 'CourseTitle', 'SubmissionStatus', 'TrainerID'],
+        },
+      ],
+    });
+
+    return res.json({ enrollments });
+  } catch (err) {
+    console.error('Fetch all enrollments error:', err);
+    return res.status(500).json({ error: 'Failed to fetch all enrollments.' });
   }
 });
 

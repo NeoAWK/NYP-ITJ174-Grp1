@@ -45,7 +45,18 @@ function Login() {
             http.post("/user/login", data)
                 .then((res) => {
                     if (!res.data.user.isVerified) {
-                        toast.error("Please verify your email before logging in.");
+                        if ( res.data.user.usertype == "TrainingProvider"){
+                            localStorage.setItem("accessToken", res.data.accessToken);
+                            setUser(res.data.user);
+                            navigate("/provider-details");
+                        }
+                        else if (res.data.user.usertype == "Trainer"){
+                            localStorage.setItem("accessToken", res.data.accessToken);
+                            setUser(res.data.user);
+                                navigate("/trainer-details");
+                        }
+                        else {
+                        toast.error("Please verify your email before logging in.")};
                     } else {
                         localStorage.setItem("accessToken", res.data.accessToken);
                         setUser(res.data.user);

@@ -90,6 +90,7 @@ router.post("/login", async (req, res) => {
         data = await validationSchema.validate(data, { abortEarly: false });
 
         let user = await User.findOne({ where: { email: data.email } });
+        
         if (!user) return res.status(400).json({ message: "Email or password wrong." });
         let match = await bcrypt.compare(data.password, user.password);
         if (!match) return res.status(400).json({ message: "Email or password wrong." });

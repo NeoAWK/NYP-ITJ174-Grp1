@@ -102,15 +102,26 @@
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE Enrollments (
+    id INT AUTO_INCREMENT PRIMARY KEY, -- Or SERIAL PRIMARY KEY for PostgreSQL
+    userId INT NOT NULL,
+    courseId VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'Enrolled',
+    enrolledAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
   -- Password: P@ssw0rd 
   INSERT INTO `users` (`id`, `name`, `email`, `password`, `mobileNo`, `profilePicture`, `isVerified`, `verificationToken`, `verificationTokenExpires`, `usertype`, `createdAt`, `updatedAt`) VALUES 
-  (2000, 'Admin Account', 'admin123@abc.com', '$2b$10$5s47/OzoBwG5FLU9Isvp.OL.NiXL5XMFqtPTSo3Kip5nvtGXUSCe2', NULL, NULL, 1, NULL, NULL, 'RightSkills', '2026-08-24 13:39:36.234 +00:00', '2026-08-26 10:52:39.847 +00:00'),
-  (2001, 'Test Trainer', 'test.trainer@rightskills.local', '$2b$10$5s47/OzoBwG5FLU9Isvp.OL.NiXL5XMFqtPTSo3Kip5nvtGXUSCe2', NULL, NULL, 1, NULL, NULL, 'Trainer', '2026-08-24 13:39:36.538 +00:00', '2026-08-26 10:52:39.993 +00:00'),
-  (3, 'Test Provider', 'provider@test.com', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'TrainingProvider', '2026-08-26 05:54:27', '2026-08-26 05:54:27'),
-  (4, 'New Provider', 'new.provider@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'TrainingProvider', '2026-08-26 06:58:22', '2026-08-26 06:58:22'),
+  (2000, 'Admin Account', 'Admin@rightskills.local', '$2b$10$5s47/OzoBwG5FLU9Isvp.OL.NiXL5XMFqtPTSo3Kip5nvtGXUSCe2', NULL, NULL, 1, NULL, NULL, 'RightSkills', '2026-08-24 13:39:36.234 +00:00', '2026-08-26 10:52:39.847 +00:00'),
+  (2001, 'Test Trainer', 'test.trainer@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'Trainer', '2026-08-24 13:39:36.538 +00:00', '2026-08-26 10:52:39.993 +00:00'),
+  (3, 'Provider One', 'provider.one@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'TrainingProvider', '2026-08-26 05:54:27', '2026-08-26 05:54:27'),
+  (4, 'Provider Two', 'provider.two@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 0, NULL, NULL, 'TrainingProvider', '2026-08-26 06:58:22', '2026-08-26 06:58:22'),
   (5, 'Trainer One', 'trainer.one@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'Trainer', '2026-08-26 06:58:22', '2026-08-26 06:58:22'),
-  (6, 'Trainer Two', 'trainer.two@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'Trainer', '2026-08-26 06:58:22', '2026-08-26 09:45:54.040 +00:00');
+  (6, 'Trainer Two', 'trainer.two@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 0, NULL, NULL, 'Trainer', '2026-08-26 06:58:22', '2026-08-26 09:45:54.040 +00:00'),
+  (7, 'Learner One', 'learner.one@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'Learner', '2026-08-26 06:58:22', '2026-08-26 09:45:54.040 +00:00'),
+  (8, 'Learner Two', 'learner.two@rightskills.local', '$2b$10$3bHugVK15H29.skXm85t0.stIfYgq87XuoeOyDbrxondRI38ffzuK', NULL, NULL, 1, NULL, NULL, 'Learner', '2026-08-26 06:58:22', '2026-08-26 09:45:54.040 +00:00');
 
   INSERT INTO `training_providers` (`userId`, `companyRegistrationId`, `companyAddress`, `postalCode`, `companyWebsite`, `mainFieldOfTraining`, `proofOfCertification`, `orgDetails`, `telephoneNo`, `emailAddress`, `accreditationStatus`) VALUES 
   (3, 'REG-123456', '221B Baker Street', 'SG 123456', 'wis.com', 'Liability Insurance', 'Yes', 'Test Training Provider Organization', '+65 9123 4567', 'provider@test.com', 'Active'),
@@ -147,6 +158,14 @@
 
   INSERT INTO `FormMetas` (`id`, `name`, `slug`, `filePath`, `version`, `isActive`, `createdAt`, `updatedAt`) VALUES 
   (1, 'Application Form Manager', 'officer-course-form', 'CourseApplicationEditorForm.yaml', 1, 1, '2026-08-24 17:03:48', '2026-08-25 02:59:42.401 +00:00');
+
+-- Enrollments for Learner One (id = 7)
+  INSERT INTO Enrollments (userId, courseId, status, enrolledAt, createdAt, updatedAt)
+  VALUES
+    (7, '001', 'Completed',   '2026-08-24 14:00:00', '2026-08-24 14:00:00', '2026-08-26 10:00:00'),
+    (7, '004', 'In Progress', '2026-08-24 14:00:00', '2026-08-25 09:00:00', '2026-08-26 09:30:00'),
+    (8, '004', 'In Progress', '2026-08-24 14:00:00', '2026-08-25 09:00:00', '2026-08-26 09:30:00'),
+    (8, '005', 'Enrolled',    '2026-08-24 14:00:00', '2026-08-26 08:00:00', '2026-08-26 08:00:00');
 
   INSERT INTO `AdminLogs` (`id`, `adminEmail`, `action`, `targetEntity`, `details`, `createdAt`, `updatedAt`) VALUES 
   (1, 'admin123@abc.com', 'COURSE_APPROVED', 'Customer Experience Design', 'Approved course submission for Clarity Learning Co.', '2026-08-24 13:39:36.311 +00:00', '2026-08-24 13:39:36.311 +00:00'),

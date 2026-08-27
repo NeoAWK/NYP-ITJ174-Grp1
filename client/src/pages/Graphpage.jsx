@@ -32,11 +32,12 @@ import PersonIcon from '@mui/icons-material/Person';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
-import { useNavigate, useParams } from 'react-router-dom'; // added useParams
+import GroupIcon from '@mui/icons-material/Group';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const API_BASE_URL = 'http://localhost:3001';
 
-// ----- Nicer colour palette -----
+// ----- Colour palette -----
 const STATUS_COLORS = {
   Active: '#4CAF50',
   Inactive: '#F44336',
@@ -47,6 +48,9 @@ const STATUS_COLORS = {
   'Pending Review': '#FFC107',
   Unknown: '#9E9E9E',
   Pending: '#FFC107',
+  Enrolled: '#9C27B0',
+  'In Progress': '#3F51B5',
+  Completed: '#009688',
 };
 
 const getStatusColor = (status) => {
@@ -55,7 +59,6 @@ const getStatusColor = (status) => {
   return STATUS_COLORS[key] || STATUS_COLORS.Unknown;
 };
 
-// ----- Determine node color -----
 const getNodeColor = (node) => {
   if (node.type === 'provider') {
     const status = node.data.accreditationStatus || 'Unknown';
@@ -72,6 +75,10 @@ const getNodeColor = (node) => {
   }
   if (node.type === 'course') {
     const status = node.data.status || 'Pending Review';
+    return getStatusColor(status);
+  }
+  if (node.type === 'learner') {
+    const status = node.data.enrollmentStatus || 'Enrolled';
     return getStatusColor(status);
   }
   return STATUS_COLORS.Unknown;
@@ -118,9 +125,30 @@ const CourseNode = ({ data }) => {
   return (
     <div style={{ padding: 10, background: '#fff3e0', borderRadius: 8, border: `2px solid ${color}`, minWidth: 140, textAlign: 'center' }}>
       <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Bottom} />
       <MenuBookIcon sx={{ color, fontSize: 28 }} />
       <Typography variant="subtitle2" fontWeight="700">{data.label}</Typography>
       <Chip size="small" label={data.status || 'Pending'} sx={{ mt: 0.5, backgroundColor: color, color: '#fff' }} />
+      {data.enrollmentCount !== undefined && (
+        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+          {data.enrollmentCount} enrolled
+        </Typography>
+      )}
+    </div>
+  );
+};
+
+const LearnerNode = ({ data }) => {
+  const color = data.color || '#9C27B0';
+  return (
+    <div style={{ padding: 10, background: '#f3e5f5', borderRadius: 8, border: `2px solid ${color}`, minWidth: 120, textAlign: 'center' }}>
+      <Handle type="target" position={Position.Top} />
+      <GroupIcon sx={{ color, fontSize: 28 }} />
+      <Typography variant="subtitle2" fontWeight="700">{data.label}</Typography>
+      <Typography variant="caption" display="block" color="text.secondary">{data.email || ''}</Typography>
+      {data.enrollmentStatus && (
+        <Chip size="small" label={data.enrollmentStatus} sx={{ mt: 0.5, backgroundColor: color, color: '#fff' }} />
+      )}
     </div>
   );
 };
@@ -129,6 +157,7 @@ const nodeTypes = {
   provider: ProviderNode,
   trainer: TrainerNode,
   course: CourseNode,
+  learner: LearnerNode,
 };
 
 // ----- Layout helper (unchanged) -----
@@ -204,7 +233,7 @@ const layoutGraph = (nodes, edges, rootId = null) => {
 // ----- Main Graph Page -----
 function GraphPage() {
   const navigate = useNavigate();
-  const { userId } = useParams(); // get userId from route
+  const { userId } = useParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -219,7 +248,6 @@ function GraphPage() {
 
   const [rootId, setRootId] = useState(null);
 
-  // Apply layout
   const applyLayout = useCallback(() => {
     if (baseNodes.length === 0) return;
     const layouted = layoutGraph(baseNodes, baseEdges, rootId);
@@ -227,7 +255,7 @@ function GraphPage() {
     setFullEdges(baseEdges);
   }, [baseNodes, baseEdges, rootId]);
 
-  // Fetch data
+  // ----- Fetch data using /enrollment/all -----
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -235,19 +263,28 @@ function GraphPage() {
       const token = localStorage.getItem('accessToken');
       const headers = { Authorization: token ? `Bearer ${token}` : '' };
 
+      // 1. Trainers
       const trainersRes = await fetch(`${API_BASE_URL}/trainers`, { headers });
       if (!trainersRes.ok) throw new Error('Failed to fetch trainers');
       const trainers = await trainersRes.json();
+      console.log('Trainers received:', trainers);
 
+      // 2. Courses
       const coursesRes = await fetch(`${API_BASE_URL}/courses`, { headers });
       if (!coursesRes.ok) throw new Error('Failed to fetch courses');
       const courses = await coursesRes.json();
+      console.log('Courses received:', courses);
 
-      // If a userId is provided, filter to that specific trainer
+      // 3. Enrollments
+      const enrollmentsRes = await fetch(`${API_BASE_URL}/enrollment/all`, { headers });
+      if (!enrollmentsRes.ok) throw new Error('Failed to fetch enrollments');
+      const { enrollments } = await enrollmentsRes.json();
+      console.log('Enrollments received:', enrollments);
+
+      // ---- Filter if userId is provided (single trainer mode) ----
       let filteredTrainers = trainers;
       let targetTrainer = null;
       if (userId) {
-        // Find the trainer by matching id, userId, or trainerId
         targetTrainer = trainers.find(
           (t) =>
             String(t.id) === userId ||
@@ -263,10 +300,11 @@ function GraphPage() {
       const nodeMap = {};
       const edgeList = [];
 
-      // Group trainers by provider (only if we are in full mode or trainer has provider)
+      // ---- Providers and Trainers ----
       const providerMap = {};
       filteredTrainers.forEach((t) => {
-        const trainerIdValue = t.trainerId ?? t.userId ?? t.id;
+        // Use trainerId (the actual user ID) as primary
+        const trainerIdValue = t.trainerId || t.userId || t.id;
         if (!trainerIdValue) {
           console.warn('Trainer missing any ID, skipping:', t);
           return;
@@ -274,14 +312,11 @@ function GraphPage() {
         const trainerId = `trainer-${trainerIdValue}`;
         const providerName = t.providerName || null;
 
-        // If userId is provided, we may or may not create a provider node
         if (userId) {
-          // Single user mode: only create provider node if providerName exists
           if (providerName) {
             if (!providerMap[providerName]) providerMap[providerName] = [];
             providerMap[providerName].push({ ...t, _trainerId: trainerId });
           } else {
-            // No provider: just add trainer directly
             nodeMap[trainerId] = {
               id: trainerId,
               type: 'trainer',
@@ -291,16 +326,15 @@ function GraphPage() {
                 certificationValidity: t.certificationValidity || null,
               },
             };
+            console.log(`Created trainer node: ${trainerId} (${t.name})`);
           }
         } else {
-          // Full mode: always group by provider (use 'Freelance' if missing)
           const groupKey = providerName || 'Freelance';
           if (!providerMap[groupKey]) providerMap[groupKey] = [];
           providerMap[groupKey].push({ ...t, _trainerId: trainerId });
         }
       });
 
-      // Create provider nodes and edges (if any)
       Object.entries(providerMap).forEach(([providerName, trainerList]) => {
         const providerId = `provider-${providerName.replace(/\s/g, '-')}`;
         nodeMap[providerId] = {
@@ -309,7 +343,7 @@ function GraphPage() {
           data: {
             label: providerName,
             count: trainerList.length,
-            accreditationStatus: 'Active', // placeholder
+            accreditationStatus: 'Active',
           },
         };
         trainerList.forEach((trainer) => {
@@ -324,26 +358,25 @@ function GraphPage() {
                 certificationValidity: trainer.certificationValidity || null,
               },
             };
+            console.log(`Created trainer node (from provider): ${trainerId} (${trainer.name})`);
           }
           edgeList.push({
             id: `${providerId}-${trainerId}`,
             source: providerId,
             target: trainerId,
           });
+          console.log(`Edge: ${providerId} → ${trainerId}`);
         });
       });
 
-      // Filter courses: if userId is provided, only include courses of that trainer
+      // ---- Courses ----
       const filteredCourses = userId
-        ? courses.filter((c) => {
-            const trainerIdMatch = String(c.TrainerId) === userId;
-            return trainerIdMatch;
-          })
+        ? courses.filter((c) => String(c.TrainerId || c.TrainerID) === userId)
         : courses;
 
-      // Course nodes – enforce "one trainer per course"
       const courseTrainerMap = {};
       filteredCourses.forEach((course) => {
+        // Handle both field naming conventions
         const courseId = `course-${course.id || course.CourseID}`;
         if (!nodeMap[courseId]) {
           const status = course.status || course.SubmissionStatus || 'Pending Review';
@@ -353,11 +386,15 @@ function GraphPage() {
             data: {
               label: course.title || course.CourseTitle || 'Untitled',
               status: status === 'Pending' ? 'Pending Review' : status,
+              enrollmentCount: 0,
             },
           };
+          console.log(`Created course node: ${courseId} (${course.title || course.CourseTitle})`);
         }
-        if (course.TrainerId) {
-          const trainerId = `trainer-${course.TrainerId}`;
+        // Connect course to its trainer
+        const trainerIdNum = course.TrainerId || course.TrainerID;
+        if (trainerIdNum) {
+          const trainerId = `trainer-${trainerIdNum}`;
           if (nodeMap[trainerId]) {
             if (!courseTrainerMap[courseId]) {
               courseTrainerMap[courseId] = trainerId;
@@ -366,16 +403,50 @@ function GraphPage() {
                 source: trainerId,
                 target: courseId,
               });
-            } else {
-              console.warn(`Course ${courseId} already has a trainer, skipping extra trainer ${trainerId}`);
+              console.log(`Edge: ${trainerId} → ${courseId}`);
             }
           } else {
-            console.warn(`Trainer ${course.TrainerId} not found for course ${courseId}`);
+            console.warn(
+              `Trainer ${trainerIdNum} not found for course ${courseId}. Available trainers:`,
+              Object.keys(nodeMap).filter((k) => k.startsWith('trainer-'))
+            );
           }
         }
       });
 
-      // Assign colors
+      // ---- Learners from enrollments ----
+      const courseIdsInGraph = new Set(
+        Object.keys(nodeMap).filter((id) => id.startsWith('course-'))
+      );
+      enrollments.forEach((enr) => {
+        const courseId = `course-${enr.course.CourseID}`;
+        if (!courseIdsInGraph.has(courseId)) return;
+        const learnerId = `learner-${enr.user.id}`;
+        if (!nodeMap[learnerId]) {
+          nodeMap[learnerId] = {
+            id: learnerId,
+            type: 'learner',
+            data: {
+              label: enr.user.name || 'Unknown',
+              email: enr.user.email || '',
+              enrollmentStatus: enr.status || 'Enrolled',
+            },
+          };
+          console.log(`Created learner node: ${learnerId} (${enr.user.name})`);
+        }
+        edgeList.push({
+          id: `${courseId}-${learnerId}`,
+          source: courseId,
+          target: learnerId,
+        });
+        console.log(`Edge: ${courseId} → ${learnerId}`);
+        if (nodeMap[courseId]) {
+          nodeMap[courseId].data.enrollmentCount =
+            (nodeMap[courseId].data.enrollmentCount || 0) + 1;
+        }
+      });
+
+      // ---- Assign colours ----
       const nodeArray = Object.values(nodeMap).map((node) => {
         const color = getNodeColor(node);
         return { ...node, data: { ...node.data, color } };
@@ -390,8 +461,7 @@ function GraphPage() {
 
       // Set initial rootId for single user mode
       if (userId && targetTrainer) {
-        const trainerId = `trainer-${targetTrainer.trainerId ?? targetTrainer.userId ?? targetTrainer.id}`;
-        // If there is a provider, we could set root to provider, but let's set to trainer for clarity
+        const trainerId = `trainer-${targetTrainer.trainerId || targetTrainer.userId || targetTrainer.id}`;
         setRootId(trainerId);
       } else {
         setRootId(null);
@@ -404,17 +474,15 @@ function GraphPage() {
     }
   }, [userId]);
 
-  // Initial fetch
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Re‑layout when base data or root changes
   useEffect(() => {
     applyLayout();
   }, [applyLayout]);
 
-  // Search filtering (unchanged)
+  // ----- Search filtering (unchanged) -----
   useEffect(() => {
     if (fullNodes.length === 0) {
       setNodes([]);
@@ -480,7 +548,7 @@ function GraphPage() {
     setRootId(null);
   }, []);
 
-  // ---- Render ----
+  // ---- Render (unchanged) ----
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -497,7 +565,6 @@ function GraphPage() {
     );
   }
 
-  // Determine if we're in single-user mode
   const isSingleUser = !!userId;
 
   return (
@@ -563,7 +630,6 @@ function GraphPage() {
             fitView
             style={{ background: '#f5f7fa' }}
             nodesDraggable={true}
-            edgesReconnectable={true}
             elementsSelectable={true}
           >
             <Background gap={16} color="#cbd5e1" />
@@ -615,6 +681,18 @@ function GraphPage() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <MenuBookIcon sx={{ color: STATUS_COLORS['Pending Review'], fontSize: 16 }} />
                 <Typography variant="caption">Course (Pending)</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <GroupIcon sx={{ color: STATUS_COLORS.Enrolled, fontSize: 16 }} />
+                <Typography variant="caption">Learner (Enrolled)</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <GroupIcon sx={{ color: STATUS_COLORS['In Progress'], fontSize: 16 }} />
+                <Typography variant="caption">Learner (In Progress)</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <GroupIcon sx={{ color: STATUS_COLORS.Completed, fontSize: 16 }} />
+                <Typography variant="caption">Learner (Completed)</Typography>
               </Box>
             </Box>
           </Paper>
