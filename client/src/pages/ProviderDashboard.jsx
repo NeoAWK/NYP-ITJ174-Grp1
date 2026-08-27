@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // 1. Added useNavigate import
 import {
   Box,
   Typography,
@@ -21,7 +22,7 @@ import {
 } from '@mui/material';
 
 import EditCourseModal from './components/EditCourseModal';
-import { Edit as EditIcon, Undo as UndoIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Undo as UndoIcon, Add as AddIcon } from '@mui/icons-material'; // 2. Added AddIcon
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -42,6 +43,7 @@ const initialData = [
 ];
 
 function ProviderDashboard() {
+  const navigate = useNavigate(); // 3. Initialize hook
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
@@ -171,7 +173,7 @@ function ProviderDashboard() {
     })
     .sort((a, b) => {
       if (sortOption === 'newest') return new Date(b.submitted) - new Date(a.submitted);
-      if (sortOption === 'oldest') return new Date(a.submitted) - new Date(b.submitted);
+      if (sortOption === 'oldest') return new Date(a.submitted) - new Date(a.submitted);
       if (sortOption === 'fee-low-high') return a.fee - b.fee;
       if (sortOption === 'fee-high-low') return b.fee - a.fee;
       return 0;
@@ -181,9 +183,26 @@ function ProviderDashboard() {
 
   return (
     <Box sx={{ pb: 4, flexGrow: 1 }}>
-      <Typography variant="h5" fontWeight="700" sx={{ mb: 3, color: '#0f172a' }}>
-        Course Submissions
-      </Typography>
+      {/* Top Header Row with Action Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" fontWeight="700" sx={{ color: '#0f172a' }}>
+          Course Submissions
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/apply/officer-course-form')}
+          sx={{
+            backgroundColor: '#4f46e5',
+            '&:hover': { backgroundColor: '#4338ca' },
+            textTransform: 'none',
+            fontWeight: 600,
+            borderRadius: 2
+          }}
+        >
+          Course Submission
+        </Button>
+      </Box>
 
       {/* Stats Cards */}
       <Box sx={{ display: 'flex', gap: 2.5, mb: 4, flexWrap: 'wrap' }}>

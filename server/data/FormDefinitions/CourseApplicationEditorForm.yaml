@@ -9,6 +9,7 @@ sections:
         type: text
         required: true
         helpText: Registered business name
+        target: training_providers.orgDetails
       - id: f2
         label: UEN / Registration Number
         type: text
@@ -20,6 +21,7 @@ sections:
         type: email
         required: true
         helpText: Official correspondence email
+        target: training_providers.emailAddress
   - id: sec2
     title: Section 2 | Course Information
     fields:
@@ -28,16 +30,23 @@ sections:
         type: text
         required: true
         helpText: Full title as intended for certificate
+        target: Courses.CourseTitle
       - id: f5
         label: Target Skill Level
         type: select
         required: true
         helpText: Foundation, Intermediate, Advanced
+        target: Courses.CourseLevel
+        options:
+          - Foundation
+          - Intermediate
+          - Advanced
       - id: f6
         label: Total Course Duration (Hours)
         type: number
         required: true
         helpText: Minimum required 16 hours
+        target: Courses.Duration
       - id: f7
         label: Course Syllabus & Outline
         type: textarea
@@ -47,12 +56,13 @@ sections:
     title: Section 3 | Trainer & Venue Qualifications
     fields:
       - id: f8
-        label: Lead Trainer Name
+        label: Trainer Name
         type: text
-        required: true
+        required: false
         helpText: Primary instructor
       - id: f9
         label: Trainer Certification Documents
         type: file
         required: false
         helpText: Upload PDF certificates
+        target: trainer_profiles.certificateFiles

@@ -137,7 +137,7 @@
   ('002', 'Professional UX/UI Workshop', 'Rejected', NULL, NULL, 0, 5, 'Foundation', 'General', 'N/A', 200.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:25:49.843 +00:00'),
   ('003', 'Forklift Operations & Safety', 'Pending', '2026-08-24 13:39:36.702 +00:00', '2026-08-24 13:39:36.702 +00:00', 0, 5, 'Foundation', 'General', 'N/A', 150.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:24:36.957 +00:00'),
   ('004', 'Advanced Digital Marketing', 'Approved', '2026-08-24 13:39:36.702 +00:00', '2029-08-24 13:39:36.702 +00:00', 1, 6, 'Foundation', 'General', 'N/A', 5000.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-24 13:39:36.702 +00:00'),
-  ('005', 'Data Science with Python', 'Approved', '2026-08-26 06:58:22', '2029-08-26', 1, 6, 'Foundation', 'General', 'N/A', 500.00, '2026-08-26 06:58:22', '2026-08-26 06:58:22'),
+  ('005', 'Data Science with Python', 'Pending', '2026-08-26 06:58:22', '2029-08-26', 1, 6, 'Foundation', 'General', 'N/A', 500.00, '2026-08-26 06:58:22', '2026-08-26 06:58:22'),
   ('006', 'Agile Project Management', 'Pending', '2026-08-26 06:58:22', '2026-08-26 06:58:22', 0, 6, 'Foundation', 'General', 'N/A', 1500.00, '2026-08-26 06:58:22', '2026-08-26 09:59:17.165 +00:00');
 
   INSERT INTO `modules` (`ModuleID`, `CourseID`, `ModuleTitle`, `ModuleDescription`, `EstimatedHours`, `OrderSequence`, `createdAt`, `updatedAt`) VALUES 
