@@ -77,6 +77,7 @@ function RightSkillsLanding() {
                 Current Role Profile: <strong>{user.usertype}</strong>
             </Typography>
 
+<<<<<<< HEAD
             {user.usertype === 'Trainer' && (
                 <Card sx={{ mb: 5, borderTop: '4px solid', borderColor: 'warning.main' }}>
                     <CardContent>
@@ -161,6 +162,17 @@ function RightSkillsLanding() {
                                 <WorkspacePremium sx={{ fontSize: 60, color: 'warning.main', mb: 2 }} />
                                 <Typography variant="h6" fontWeight="bold">
                                     Trainer Profile
+=======
+            {/* Core registration hub — always available, all three roles */}
+            <Grid container spacing={4} justifyContent="center">
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+                        <CardActionArea onClick={() => navigate('/register-provider')}>
+                            <CardContent sx={{ py: 5 }}>
+                                <Business sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+                                <Typography variant="h6" fontWeight="bold">
+                                    Register Training Providers
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
                                 </Typography>
                             </CardContent>
                         </CardActionArea>
@@ -169,16 +181,41 @@ function RightSkillsLanding() {
 
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+<<<<<<< HEAD
                             <CardActionArea onClick={() => navigate('/trainer-dashboard')}>
                             <CardContent sx={{ py: 5 }}>
                                 <DashboardCustomize sx={{ fontSize: 60, color: 'info.main', mb: 2 }} />
                                 <Typography variant="h6" fontWeight="bold">
                                     Trainer Dashboard
+=======
+                        <CardActionArea onClick={() => navigate('/register-trainer')}>
+                            <CardContent sx={{ py: 5 }}>
+                                <School sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
+                                <Typography variant="h6" fontWeight="bold">
+                                    Register Trainers
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
                                 </Typography>
                             </CardContent>
                         </CardActionArea>
                     </Card>
                 </Grid>
+<<<<<<< HEAD
+=======
+
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+                        <CardActionArea onClick={() => navigate('/register-learner')}>
+                            <CardContent sx={{ py: 5 }}>
+                                <Group sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+                                <Typography variant="h6" fontWeight="bold">
+                                    Register Learners
+                                </Typography>
+                            </CardContent>
+                        </CardActionArea>
+                    </Card>
+                </Grid>
+
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
             </Grid>
         </Box>
     );

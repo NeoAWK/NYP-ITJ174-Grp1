@@ -210,7 +210,74 @@ router.put("/ecosystem-profile", validateToken, async (req, res) => {
         } else if (user.usertype === 'Learner') {
             await LearnerProfile.upsert({ userId: user.id, ...req.body });
         }
+<<<<<<< HEAD
         res.json({ message: "Ecosystem details saved." });
+=======
+
+        const role = req.body.role
+            || (req.body.companyRegistrationId ? 'Training Provider' : user.usertype);
+
+        if (role === 'Training Provider') {
+            if (user.usertype !== 'Training Provider') {
+                await user.update({ usertype: 'Training Provider' });
+            }
+
+            await TrainingProvider.upsert({
+                userId: user.id,
+                name: req.body.name,
+                emailAddress: req.body.emailAddress,
+                mobileNo: req.body.mobileNo,
+                companyRegistrationId: req.body.companyRegistrationId,
+                companyAddress: req.body.companyAddress,
+                postalCode: req.body.postalCode,
+                companyWebsite: req.body.companyWebsite,
+                mainFieldOfTraining: req.body.mainFieldOfTraining,
+                proofOfCertification: req.body.proofOfCertification
+            });
+
+            return res.json({ message: "Training Provider details submitted successfully!" });
+        }
+
+        if (role === 'Trainer') {
+            if (user.usertype !== 'Trainer') {
+                await user.update({ usertype: 'Trainer' });
+            }
+
+            if (req.body.mobileNo !== undefined) {
+                await user.update({ mobileNo: req.body.mobileNo || null });
+            }
+
+            await TrainerProfile.upsert({
+                userId: user.id,
+                name: req.body.name,
+                emailAddress: req.body.emailAddress,
+                areasOfExpertise: req.body.areasOfExpertise,
+                resumeExperience: req.body.resumeExperience
+            });
+
+            return res.json({ message: "Trainer details saved successfully!" });
+        }
+
+        if (role === 'Learner') {
+            if (user.usertype !== 'Learner') {
+                await user.update({ usertype: 'Learner' });
+            }
+
+            await LearnerProfile.upsert({
+                userId: user.id,
+                name: req.body.name,
+                email: req.body.email || req.body.emailAddress,
+                mobileNo: req.body.mobileNo,
+                educationQualification: req.body.educationQualification,
+                areaOfInterest: req.body.areaOfInterest,
+                attachment: req.body.attachment
+            });
+
+            return res.json({ message: "Learner details saved successfully!" });
+        }
+
+        res.status(400).json({ message: "Invalid user type." });
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
     } catch (err) {
         res.status(400).json({ message: "Save failed.", error: err });
     }

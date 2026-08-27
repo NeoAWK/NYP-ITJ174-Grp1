@@ -336,6 +336,7 @@ function App() {
                 )}
 
                 <Routes>
+<<<<<<< HEAD
                   <Route
                     path="/"
                     element={
@@ -349,6 +350,28 @@ function App() {
                   <Route path={"/register-provider"} element={user?.usertype === 'Trainer' ? <Navigate to="/" replace /> : <RegisterProvider />} />
                   <Route path={"/register-trainer"} element={user?.usertype === 'Trainer' ? <Navigate to="/" replace /> : <RegisterTrainer />} />
                   <Route path={"/register-learner"} element={user?.usertype === 'Trainer' ? <Navigate to="/" replace /> : <RegisterLearner />} />
+=======
+                  {/* Logged-out users see the simple welcome page; logged-in users
+                      see the registration Hub, which itself handles Trainer-specific
+                      extras internally. Officers are routed straight to their
+                      dashboard from Login.jsx instead of via this route. */}
+                  <Route
+                    path={"/"}
+                    element={
+                      user
+                        ? (user.usertype === 'Trainer' ? <TrainerDashboard /> : <RightSkillsLanding />)
+                        : <RightSkillsHome />
+                    }
+                  />
+
+                  <Route path={"/register-provider"} element={<RegisterProvider />} />
+                  <Route path={"/register-trainer"} element={<RegisterTrainer />} />
+                  <Route path={"/register-learner"} element={<RegisterLearner />} />
+                  <Route path={"/provider-details"} element={<ProviderDetails />} />
+                  <Route path={"/trainer-details"} element={<TrainerDetails />} />
+                  <Route path={"/learner-details"} element={<LearnerDetails />} />
+
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
                   <Route path={"/trainer-profile"} element={<TrainerProfile />} />
                   <Route path={"/trainer-profile-overview"} element={<TrainerProfile />} />
                   <Route path={"/trainer-dashboard"} element={<TrainerDashboard />} />

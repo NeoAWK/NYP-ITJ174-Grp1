@@ -32,8 +32,11 @@ function Profile() {
                 .transform((value, originalValue) => originalValue === '' ? null : value)
                 .nullable()
                 .matches(/^[0-9]+$/, "Only numbers are allowed")
+<<<<<<< HEAD
                 .min(8, 'Mobile number must be at least 8 characters')
                 .max(15, 'Mobile number must be at most 15 characters')
+=======
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
         }),
         onSubmit: async (data) => {
             let uploadedFilename = null;
@@ -53,7 +56,11 @@ function Profile() {
 
                 // 2. Update Profile Data
                 const updateData = {
+<<<<<<< HEAD
                     mobileNo: data.mobileNo.trim() || null,
+=======
+                    mobileNo: data.mobileNo || null,
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
                     profilePicture: profilePicture
                 };
 
@@ -117,12 +124,22 @@ function Profile() {
                 <TextField
                     fullWidth margin="dense" label="Mobile Number"
                     name="mobileNo"
+<<<<<<< HEAD
                     value={formik.values.mobileNo}
+=======
+                    value={formik.values.mobileNo || ""}
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     error={formik.touched.mobileNo && Boolean(formik.errors.mobileNo)}
                     helperText={formik.touched.mobileNo && formik.errors.mobileNo}
+<<<<<<< HEAD
                 />
+=======
+                    placeholder="Enter 8+ digits"
+                />
+
+>>>>>>> 81845df (Fix trainer profile mobile handling and UI flow)
                 <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                     <Button fullWidth variant="contained" type="submit">
                         Update Profile

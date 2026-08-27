@@ -377,7 +377,7 @@ function TrainerProfile() {
                                         </Avatar>
                                         <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>{user.name}</Typography>
                                         <Typography color="text.secondary" sx={{ mb: 2 }}>{user.email}</Typography>
-                                        <Typography variant="body2">Phone: {user.mobileNo || 'Not provided'}</Typography>
+                                        <Typography variant="body2">Phone: {user.mobileNo || profileDetails?.mobileNo || 'Not provided'}</Typography>
                                         <Typography variant="body2">Profile status: {profileDetails?.qualifications ? 'Complete' : 'In progress'}</Typography>
                                         <Typography variant="body2" sx={{ mt: 1 }}>Certification valid until: {profileDetails?.certificationValidity || 'Not provided'}</Typography>
                                     </CardContent>
