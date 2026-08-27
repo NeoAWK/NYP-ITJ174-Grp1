@@ -44,11 +44,20 @@ function CourseDetail() {
         const token = localStorage.getItem("accessToken");
         if (!token) return;
 
-        // Fetch all user enrollments to check if current course is enrolled (matches AvailableCourses logic)
         http.get('/enrollment/my-courses')
             .then((res) => {
-                const enrolledIds = (res.data.enrolledCourseIds || []).map(String);
-                if (enrolledIds.includes(String(id))) {
+                const rawIds = res.data.enrolledCourseIds || res.data.enrollments || [];
+                
+                // Extract clean IDs safely regardless of backend output structure
+                const enrolledIds = rawIds.map((item) => {
+                    if (typeof item === 'object' && item !== null) {
+                        return String(item.courseId || item.CourseID || item.id);
+                    }
+                    return String(item);
+                });
+
+                const targetId = String(id);
+                if (enrolledIds.includes(targetId)) {
                     setIsEnrolled(true);
                 }
             })
@@ -60,7 +69,6 @@ function CourseDetail() {
     const handleEnroll = () => {
         const token = localStorage.getItem("accessToken");
         
-        // Redirect to login if user is unauthenticated
         if (!token) {
             setSnackbar({
                 open: true,
@@ -189,14 +197,14 @@ function CourseDetail() {
                                 color="success" 
                                 size="large"
                                 startIcon={<CheckCircle />}
-                                disabled
+                                onClick={() => navigate('/my-courses')}
                                 sx={{ 
                                     width: { xs: 'auto', sm: '100%' },
                                     minWidth: { xs: '150px', sm: '180px' },
                                     py: { xs: 1, sm: 1.2 }
                                 }}
                             >
-                                Already Enrolled
+                                Enrolled
                             </Button>
                         ) : (
                             <Button 

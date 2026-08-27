@@ -42,8 +42,17 @@ function AvailableCourses() {
       if (localStorage.getItem("accessToken")) {
         try {
           const enrollRes = await http.get("/enrollment/my-courses");
-          const ids = enrollRes.data.enrolledCourseIds || [];
-          setEnrolledCourseIds(ids.map(String));
+          const rawIds = enrollRes.data.enrolledCourseIds || enrollRes.data.enrollments || [];
+          
+          // Normalize IDs safely regardless of backend shape (Objects vs primitives)
+          const cleanIds = rawIds.map((item) => {
+            if (typeof item === "object" && item !== null) {
+              return String(item.courseId || item.CourseID || item.id);
+            }
+            return String(item);
+          });
+
+          setEnrolledCourseIds(cleanIds);
         } catch (err) {
           console.log("Could not load user enrollment status:", err);
         }
@@ -57,12 +66,15 @@ function AvailableCourses() {
   };
 
   const handleEnroll = (courseId) => {
-    setEnrollingId(courseId);
+    const cleanId = String(courseId);
+    setEnrollingId(cleanId);
+    
     http
-      .post("/enrollment/enroll", { courseId: String(courseId) })
+      .post("/enrollment/enroll", { courseId: cleanId })
       .then((res) => {
         setEnrollingId(null);
-        setEnrolledCourseIds((prev) => [...prev, String(courseId)]);
+        // Add ID to enrolled state and eliminate duplicates
+        setEnrolledCourseIds((prev) => Array.from(new Set([...prev, cleanId])));
         setSnackbar({
           open: true,
           message: res.data.message || "Enrolled successfully!",
@@ -122,7 +134,8 @@ function AvailableCourses() {
       ) : (
         <Grid container spacing={3}>
           {courses.map((course) => {
-            const courseId = String(course.CourseID || course.id);
+            // Flexible property fallback to handle casing differences
+            const courseId = String(course.CourseID || course.id || course.courseId);
             const title = course.CourseTitle || course.title || "Untitled Course";
             const category = course.Category || course.category || "General";
             const duration = course.Duration || course.duration || "N/A";
@@ -183,8 +196,14 @@ function AvailableCourses() {
                     </Button>
 
                     {isAlreadyEnrolled ? (
-                      <Button fullWidth variant="contained" color="success" startIcon={<CheckCircle />} disabled>
-                        Already Enrolled
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        color="success"
+                        startIcon={<CheckCircle />}
+                        onClick={() => navigate("/my-courses")}
+                      >
+                        Enrolled
                       </Button>
                     ) : (
                       <Button
