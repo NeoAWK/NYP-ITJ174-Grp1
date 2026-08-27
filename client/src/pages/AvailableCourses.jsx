@@ -12,8 +12,9 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
+  Stack,
 } from "@mui/material";
-import { School, HowToReg, Visibility, CheckCircle } from "@mui/icons-material";
+import { School, HowToReg, Visibility, CheckCircle, AccountBalanceWallet } from "@mui/icons-material";
 import http from "../http";
 
 function AvailableCourses() {
@@ -113,9 +114,6 @@ function AvailableCourses() {
         <Typography variant="h4" fontWeight="bold" gutterBottom>
           Available Courses
         </Typography>
-        <Typography color="text.secondary">
-          Explore active courses and start expanding your skills.
-        </Typography>
       </Box>
 
       {error && (
@@ -134,16 +132,19 @@ function AvailableCourses() {
       ) : (
         <Grid container spacing={3}>
           {courses.map((course) => {
-            // Flexible property fallback to handle casing differences
             const courseId = String(course.CourseID || course.id || course.courseId);
             const title = course.CourseTitle || course.title || "Untitled Course";
             const category = course.Category || course.category || "General";
             const duration = course.Duration || course.duration || "N/A";
             const level = course.CourseLevel || course.level || "Foundation";
-            const fee = course.CourseFee ?? course.fee ?? 0;
+            const numericFee = Number(course.CourseFee ?? course.fee ?? 0);
 
             const isThisEnrolling = enrollingId === courseId;
             const isAlreadyEnrolled = enrolledCourseIds.includes(courseId);
+
+            // Funding Support logic based on $500 threshold
+            const isFullySupported = numericFee <= 500;
+            const outOfPocket = isFullySupported ? 0 : numericFee - 500;
 
             return (
               <Grid item xs={12} sm={6} md={4} key={courseId}>
@@ -179,9 +180,35 @@ function AvailableCourses() {
                       Level: <strong>{level}</strong>
                     </Typography>
 
-                    <Typography variant="h6" fontWeight="bold" color="primary.main">
-                      ${Number(fee).toFixed(2)}
-                    </Typography>
+                    {/* Price and Support Status Badge */}
+                    <Box sx={{ mb: 1 }}>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                        <Typography variant="h6" fontWeight="bold" color="primary.main">
+                          ${numericFee.toFixed(2)}
+                        </Typography>
+
+                        <Chip
+                          icon={<AccountBalanceWallet style={{ fontSize: 16 }} />}
+                          label={isFullySupported ? "Fully Supported" : "Partially Supported"}
+                          size="small"
+                          color={isFullySupported ? "success" : "warning"}
+                          sx={{ fontWeight: "bold" }}
+                        />
+                      </Stack>
+
+                      {/* Financial Breakdown Note */}
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                        {isFullySupported ? (
+                          <span style={{ color: "#2e7d32", fontWeight: 600 }}>
+                            100% covered by $500 Credited Funds ($0 out of pocket)
+                          </span>
+                        ) : (
+                          <span style={{ color: "#ed6c02", fontWeight: 600 }}>
+                            Covers $500.00 • ${outOfPocket.toFixed(2)} remaining out-of-pocket
+                          </span>
+                        )}
+                      </Typography>
+                    </Box>
                   </CardContent>
 
                   <Box sx={{ p: 2, pt: 0, display: "flex", flexDirection: "column", gap: 1 }}>

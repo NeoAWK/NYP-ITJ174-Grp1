@@ -133,12 +133,12 @@
   (6, 'Architecture', 'Built the eiffel Tower', 'Master in Instructional Design', 'Certified e-Learning Specialist', '8 years designing and delivering technical courses.', NULL, 'Member of the International Training Federation', '2030-06-30', NULL, NULL, 4);
 
   INSERT INTO `Courses` (`CourseID`, `CourseTitle`, `SubmissionStatus`, `ApprovalDate`, `ApprovalExpiryDate`, `IsActive`, `TrainerID`, `CourseLevel`, `Category`, `Duration`, `CourseFee`, `createdAt`, `updatedAt`) VALUES 
-  ('001', 'Advanced Python & AI Basics', 'Approved', '2026-08-24 13:39:36.702 +00:00', '2029-08-24 13:39:36.702 +00:00', 1, 2, 'Foundation', 'General', 'N/A', 0.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:13:35.930 +00:00'),
-  ('002', 'Professional UX/UI Workshop', 'Rejected', NULL, NULL, 0, 5, 'Foundation', 'General', 'N/A', 0.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:25:49.843 +00:00'),
-  ('003', 'Forklift Operations & Safety', 'Pending', '2026-08-24 13:39:36.702 +00:00', '2026-08-24 13:39:36.702 +00:00', 0, 5, 'Foundation', 'General', 'N/A', 0.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:24:36.957 +00:00'),
-  ('004', 'Advanced Digital Marketing', 'Approved', '2026-08-24 13:39:36.702 +00:00', '2029-08-24 13:39:36.702 +00:00', 1, 6, 'Foundation', 'General', 'N/A', 0.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-24 13:39:36.702 +00:00'),
-  ('005', 'Data Science with Python', 'Approved', '2026-08-26 06:58:22', '2029-08-26', 1, 6, 'Foundation', 'General', 'N/A', 0.00, '2026-08-26 06:58:22', '2026-08-26 06:58:22'),
-  ('006', 'Agile Project Management', 'Pending', '2026-08-26 06:58:22', '2026-08-26 06:58:22', 0, 6, 'Foundation', 'General', 'N/A', 0.00, '2026-08-26 06:58:22', '2026-08-26 09:59:17.165 +00:00');
+  ('001', 'Advanced Python & AI Basics', 'Approved', '2026-08-24 13:39:36.702 +00:00', '2029-08-24 13:39:36.702 +00:00', 1, 2, 'Foundation', 'General', 'N/A', 300.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:13:35.930 +00:00'),
+  ('002', 'Professional UX/UI Workshop', 'Rejected', NULL, NULL, 0, 5, 'Foundation', 'General', 'N/A', 200.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:25:49.843 +00:00'),
+  ('003', 'Forklift Operations & Safety', 'Pending', '2026-08-24 13:39:36.702 +00:00', '2026-08-24 13:39:36.702 +00:00', 0, 5, 'Foundation', 'General', 'N/A', 150.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-26 09:24:36.957 +00:00'),
+  ('004', 'Advanced Digital Marketing', 'Approved', '2026-08-24 13:39:36.702 +00:00', '2029-08-24 13:39:36.702 +00:00', 1, 6, 'Foundation', 'General', 'N/A', 5000.00, '2026-08-24 13:39:36.702 +00:00', '2026-08-24 13:39:36.702 +00:00'),
+  ('005', 'Data Science with Python', 'Approved', '2026-08-26 06:58:22', '2029-08-26', 1, 6, 'Foundation', 'General', 'N/A', 500.00, '2026-08-26 06:58:22', '2026-08-26 06:58:22'),
+  ('006', 'Agile Project Management', 'Pending', '2026-08-26 06:58:22', '2026-08-26 06:58:22', 0, 6, 'Foundation', 'General', 'N/A', 1500.00, '2026-08-26 06:58:22', '2026-08-26 09:59:17.165 +00:00');
 
   INSERT INTO `modules` (`ModuleID`, `CourseID`, `ModuleTitle`, `ModuleDescription`, `EstimatedHours`, `OrderSequence`, `createdAt`, `updatedAt`) VALUES 
   ('MOD-101001', '001', 'Introduction to NumPy & Pandas', 'Data manipulation basics, cleaning datasets, and structural arrays.', 2, 1, '2026-08-24 13:39:36.752 +00:00', '2026-08-24 13:39:36.752 +00:00'),

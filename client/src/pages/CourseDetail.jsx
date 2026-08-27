@@ -3,9 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
     Container, Box, Typography, Card, 
     Button, Chip, CircularProgress, Alert, Paper, 
-    Accordion, AccordionSummary, AccordionDetails, Divider, Snackbar
+    Accordion, AccordionSummary, AccordionDetails, Divider, Snackbar, Stack
 } from '@mui/material';
-import { ArrowBack, ExpandMore, AccessTime, School, HowToReg, CheckCircle } from '@mui/icons-material';
+import { ArrowBack, ExpandMore, AccessTime, School, HowToReg, CheckCircle, AccountBalanceWallet } from '@mui/icons-material';
 import http from '../http';
 
 function CourseDetail() {
@@ -124,6 +124,11 @@ function CourseDetail() {
 
     const modules = course.modules || course.Modules || [];
     const totalHours = modules.reduce((sum, m) => sum + (m.EstimatedHours || 0), 0);
+    const numericFee = Number(course.CourseFee || course.fee || 0);
+
+    // Funding Support logic based on $500 threshold
+    const isFullySupported = numericFee <= 500;
+    const outOfPocket = isFullySupported ? 0 : numericFee - 500;
 
     return (
         <Container maxWidth="md" sx={{ mt: { xs: 2, sm: 4 }, mb: 6, px: { xs: 2, sm: 3 } }}>
@@ -150,6 +155,13 @@ function CourseDetail() {
                         <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
                             <Chip label={course.Category || 'General'} color="primary" variant="outlined" size="small" />
                             <Chip label={`Level: ${course.CourseLevel || 'Foundation'}`} color="secondary" variant="outlined" size="small" />
+                            <Chip 
+                                icon={<AccountBalanceWallet style={{ fontSize: 16 }} />}
+                                label={isFullySupported ? "Fully Supported" : "Partially Supported"}
+                                size="small"
+                                color={isFullySupported ? "success" : "warning"}
+                                sx={{ fontWeight: "bold" }}
+                            />
                         </Box>
                         <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                             {course.CourseTitle}
@@ -186,9 +198,26 @@ function CourseDetail() {
                             variant="h4" 
                             fontWeight="bold" 
                             color="primary.main" 
-                            sx={{ mb: { xs: 0, sm: 1 }, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}
+                            sx={{ mb: { xs: 0, sm: 0.5 }, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}
                         >
-                            ${Number(course.CourseFee || 0).toFixed(2)}
+                            ${numericFee.toFixed(2)}
+                        </Typography>
+
+                        {/* Financial Breakdown Note */}
+                        <Typography 
+                            variant="caption" 
+                            color="text.secondary" 
+                            sx={{ mb: { xs: 0, sm: 1.5 }, textAlign: { xs: 'left', sm: 'right' }, display: 'block' }}
+                        >
+                            {isFullySupported ? (
+                                <span style={{ color: "#2e7d32", fontWeight: 600 }}>
+                                    100% covered by $500 Credited Funds
+                                </span>
+                            ) : (
+                                <span style={{ color: "#ed6c02", fontWeight: 600 }}>
+                                    Covers $500.00 • ${outOfPocket.toFixed(2)} out-of-pocket
+                                </span>
+                            )}
                         </Typography>
 
                         {isEnrolled ? (

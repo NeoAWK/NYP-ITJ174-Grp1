@@ -24,7 +24,7 @@ function Profile() {
         initialValues: {
             name: user?.name || "",
             email: user?.email || "",
-            
+            mobileNo: user?.mobileNo || ""
         },
         enableReinitialize: true,
         validationSchema: yup.object({
@@ -32,7 +32,8 @@ function Profile() {
                 .transform((value, originalValue) => originalValue === '' ? null : value)
                 .nullable()
                 .matches(/^[0-9]+$/, "Only numbers are allowed")
-                
+                .min(8, 'Mobile number must be at least 8 characters')
+                .max(15, 'Mobile number must be at most 15 characters')
         }),
         onSubmit: async (data) => {
             let uploadedFilename = null;
@@ -52,7 +53,7 @@ function Profile() {
 
                 // 2. Update Profile Data
                 const updateData = {
-                    
+                    mobileNo: data.mobileNo ? data.mobileNo.trim() : null,
                     profilePicture: profilePicture
                 };
 
@@ -113,7 +114,21 @@ function Profile() {
                     fullWidth margin="dense" label="Email"
                     name="email" value={formik.values.email} disabled
                 />
-                
+                <TextField
+                    fullWidth margin="dense" label="Mobile Number"
+                    name="mobileNo"
+                    value={formik.values.mobileNo || ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    error={formik.touched.mobileNo && Boolean(formik.errors.mobileNo)}
+                    helperText={formik.touched.mobileNo && formik.errors.mobileNo}
+                    placeholder="Enter 8+ digits"
+                />
+                <TextField
+                    fullWidth margin="dense" label="Credited Funds"
+                    name="creditedFunds" value="$500.00" disabled
+                />
+
                 <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                     <Button fullWidth variant="contained" type="submit">
                         Update Profile
