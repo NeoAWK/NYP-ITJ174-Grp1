@@ -77,7 +77,7 @@ function Login() {
             </Typography>
             {backendMode === 'placeholder' && (
                 <Alert severity="info" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
-                    <strong>Officer Login:</strong> admin123@abc.com / test123 <br />
+                    <strong>Officer Login:</strong> admin123@abc.com / P@ssw0rd <br />
                     <strong>Temp Account:</strong> temp@rightskills.local / TempPass123!
                 </Alert>
             )}

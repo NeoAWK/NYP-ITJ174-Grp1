@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Grid, Card, CardContent, CardActionArea } from '@mui/material';
-import { Business, School, Group, WorkspacePremium, DashboardCustomize } from '@mui/icons-material';
+import { Business, WorkspacePremium, DashboardCustomize } from '@mui/icons-material';
 import UserContext from '../contexts/UserContext';
 import http from '../http';
 
@@ -56,8 +56,6 @@ function RightSkillsLanding() {
     }, [user]);
 
     if (!user) {
-        // Should not normally be reached — App.jsx routes logged-out users to
-        // RightSkillsHome instead. Kept as a safety fallback.
         return (
             <Box sx={{ textAlignment: 'center', mt: 8 }}>
                 <Typography variant="h4" align="center" gutterBottom>
@@ -75,8 +73,10 @@ function RightSkillsLanding() {
             <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', mb: 4 }}>
                 RightSkills Ecosystem Management Hub
             </Typography>
+            <Typography variant="subtitle1" align="center" color="textSecondary" sx={{ mb: 5 }}>
+                Current Role Profile: <strong>{user.usertype}</strong>
+            </Typography>
 
-            {/* Trainer-only profile summary (teammate's addition) — only rendered for actual Trainers */}
             {user.usertype === 'Trainer' && (
                 <Card sx={{ mb: 5, borderTop: '4px solid', borderColor: 'warning.main' }}>
                     <CardContent>
@@ -94,13 +94,21 @@ function RightSkillsLanding() {
                             {[
                                 ['Qualifications', trainerProfile?.qualifications],
                                 ['Certification', trainerProfile?.certification],
+                                ['Experience', (() => {
+                                    const latest = getLatestExperience(trainerProfile);
+                                    return latest
+                                        ? `${latest.jobTitle} at ${latest.organization}: ${latest.description}`
+                                        : trainerProfile?.experience;
+                                })()],
                                 ['Professional Development', trainerProfile?.professionalDevelopment],
                                 ['Certification Validity', trainerProfile?.certificationValidity]
                             ].map(([label, value]) => (
+                                label === 'Experience' ? null : (
                                 <Grid item xs={12} key={label}>
                                     <Typography variant="subtitle2">{label}</Typography>
                                     <Typography color="text.secondary">{value || 'Not provided'}</Typography>
                                 </Grid>
+                                )
                             ))}
                         </Grid>
                         <Box sx={{ mt: 2 }}>
@@ -130,77 +138,47 @@ function RightSkillsLanding() {
                 </Card>
             )}
 
-            {/* Core registration hub — always available, all three roles */}
             <Grid container spacing={4} justifyContent="center">
-                <Grid item xs={12} sm={4}>
-                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
-                        <CardActionArea onClick={() => navigate('/register-provider')}>
-                            <CardContent sx={{ py: 5 }}>
-                                <Business sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                                <Typography variant="h6" fontWeight="bold">
-                                    Register Training Providers
-                                </Typography>
-                            </CardContent>
-                        </CardActionArea>
-                    </Card>
-                </Grid>
-
-                <Grid item xs={12} sm={4}>
-                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
-                        <CardActionArea onClick={() => navigate('/register-trainer')}>
-                            <CardContent sx={{ py: 5 }}>
-                                <School sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
-                                <Typography variant="h6" fontWeight="bold">
-                                    Register Trainers
-                                </Typography>
-                            </CardContent>
-                        </CardActionArea>
-                    </Card>
-                </Grid>
-
-                <Grid item xs={12} sm={4}>
-                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
-                        <CardActionArea onClick={() => navigate('/register-learner')}>
-                            <CardContent sx={{ py: 5 }}>
-                                <Group sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
-                                <Typography variant="h6" fontWeight="bold">
-                                    Register Learners
-                                </Typography>
-                            </CardContent>
-                        </CardActionArea>
-                    </Card>
-                </Grid>
-
-                {/* Trainer-only quick links (teammate's addition) — additive, shown alongside the core hub, not replacing it */}
-                {user.usertype === 'Trainer' && (
-                    <>
-                        <Grid item xs={12} sm={4}>
-                            <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
-                                <CardActionArea onClick={() => navigate('/trainer-profile-overview')}>
-                                    <CardContent sx={{ py: 5 }}>
-                                        <WorkspacePremium sx={{ fontSize: 60, color: 'warning.main', mb: 2 }} />
-                                        <Typography variant="h6" fontWeight="bold">
-                                            Trainer Profile
-                                        </Typography>
-                                    </CardContent>
-                                </CardActionArea>
-                            </Card>
-                        </Grid>
-
-                        <Grid item xs={12} sm={4}>
-                            <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
-                                <CardActionArea onClick={() => navigate('/trainer-dashboard')}>
-                                    <CardContent sx={{ py: 5 }}>
-                                        <DashboardCustomize sx={{ fontSize: 60, color: 'info.main', mb: 2 }} />
-                                        <Typography variant="h6" fontWeight="bold">
-                                            Trainer Dashboard
-                                        </Typography>
-                                    </CardContent>
-                                </CardActionArea>
-                            </Card>
-                        </Grid>
-                    </>
+                {user.usertype !== 'Trainer' && (
+                    <Grid item xs={12} sm={4}>
+                        <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+                            <CardActionArea onClick={() => navigate('/register-provider')}>
+                                <CardContent sx={{ py: 5 }}>
+                                    <Business sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+                                    <Typography variant="h6" fontWeight="bold">
+                                        Register Training Providers
+                                    </Typography>
+                                </CardContent>
+                            </CardActionArea>
+                        </Card>
+                    </Grid>
                 )}
+
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+                            <CardActionArea onClick={() => navigate('/trainer-profile-overview')}>
+                            <CardContent sx={{ py: 5 }}>
+                                <WorkspacePremium sx={{ fontSize: 60, color: 'warning.main', mb: 2 }} />
+                                <Typography variant="h6" fontWeight="bold">
+                                    Trainer Profile
+                                </Typography>
+                            </CardContent>
+                        </CardActionArea>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ textAlign: 'center', boxShadow: 3 }}>
+                            <CardActionArea onClick={() => navigate('/trainer-dashboard')}>
+                            <CardContent sx={{ py: 5 }}>
+                                <DashboardCustomize sx={{ fontSize: 60, color: 'info.main', mb: 2 }} />
+                                <Typography variant="h6" fontWeight="bold">
+                                    Trainer Dashboard
+                                </Typography>
+                            </CardContent>
+                        </CardActionArea>
+                    </Card>
+                </Grid>
             </Grid>
         </Box>
     );
