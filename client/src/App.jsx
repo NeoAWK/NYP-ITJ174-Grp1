@@ -53,6 +53,9 @@ import UsersPage from './pages/users';
 import EditCourseModal from './pages/components/EditCourseModal';
 import CourseManagement from './pages/CourseManagement';
 import GraphPage from './pages/Graphpage';
+import AvailableCourses from './pages/AvailableCourses';
+import CourseDetail from './pages/CourseDetail';
+import MyCourses from "./pages/MyCourses";
 
 const defaultTheme = createTheme();
 
@@ -72,6 +75,7 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
 
   const isOfficer = Boolean(user && user.email === 'admin123@abc.com');
   const isTrainer = Boolean(user && user.usertype === 'Trainer');
+  const isLearner = Boolean(user && user.usertype === 'Learner');
   const isProvider = Boolean(user && user.usertype === "TrainingProvider")
 
   const handleNotificationClick = (event) => setAnchorEl(event.currentTarget);
@@ -102,6 +106,17 @@ function NavigationBar({ user, logout, notifications, setNotifications }) {
               RightSkills
             </Typography>
           </Link>
+
+          {isLearner && (
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              <Link to="/available-courses" style={{ color: 'white', textDecoration: 'none' }}>
+                <Typography fontWeight="500">AVAILABLE COURSES</Typography>
+              </Link>
+              <Link to="/my-courses" style={{ color: 'white', textDecoration: 'none' }}>
+                <Typography fontWeight="500">ENROLLED</Typography>
+              </Link>
+            </Box>
+          )}
 
           {/* Trainer */}
           {isTrainer && (
@@ -386,8 +401,11 @@ function App() {
                   <Route path="/apply/:slug" element={<ApplyFormPage />} />
                   <Route path="/provider-dashboard" element={<ProviderDashboard />} />
                   <Route path="/users" element={<UsersPage />} />
-                   <Route path="/Courses" element={<CourseManagement />} />
-                    <Route path="/Graph" element={<GraphPage />} />
+                  <Route path="/Courses" element={<CourseManagement />} />
+                  <Route path="/Graph" element={<GraphPage />} />
+                  <Route path="/available-courses" element={<AvailableCourses />} />
+                  <Route path="/available-courses/:id" element={<CourseDetail />} />
+                  <Route path="/my-courses" element={<MyCourses />} />
                 </Routes>
               </Container>
             </Box>

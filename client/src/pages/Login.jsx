@@ -53,7 +53,7 @@ function Login() {
                         // Route to Officer Dashboard if officer email, else default route
                         if (res.data.user.email === 'admin123@abc.com') {
                             navigate("/officer-dashboard");
-                        } else {
+                        }  else {
                             navigate("/");
                         }
                     }
