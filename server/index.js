@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const fs = require('fs');
 const { sign } = require('jsonwebtoken');
 require('dotenv').config();
 
@@ -37,7 +38,7 @@ function registerDatabaseRoutes() {
   const databaseFieldsRouter = require('./routes/databaseFields');
   const submitRoutes = require('./routes/formSubmit');
   const trainerRoutes = require('./routes/trainer');
-
+  const enrollmentRouter = require('./routes/enrollment');
   
   if (trainerRoutes) app.use('/trainers', trainerRoutes);
   if (submitRoutes) app.use('/submit-form', submitRoutes);  
@@ -48,6 +49,7 @@ function registerDatabaseRoutes() {
   if (adminRoute) app.use('/admin', adminRoute);
   if (courseRoute) app.use('/courses', courseRoute);
   if (formRoute) app.use('/forms', formRoute);  
+  app.use('/enrollment', enrollmentRouter);
 }
 
 function registerPlaceholderRoutes() {
@@ -73,7 +75,6 @@ function registerPlaceholderRoutes() {
   };
   const officerPassword = 'test123';
 
-  // Fallback Courses Route
   app.get('/courses', (req, res) => {
     res.json([
       {
@@ -197,6 +198,29 @@ function startServer() {
   app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
   });
+}
+
+async function runInitialSqlSeed(db) {
+  const sqlPath = path.join(__dirname, '..', 'schema.sql');
+  if (fs.existsSync(sqlPath)) {
+    const rawSql = fs.readFileSync(sqlPath, 'utf8');
+    await db.sequelize.query('PRAGMA foreign_keys = OFF;');
+    const statements = rawSql
+      .split(';')
+      .map(stmt => stmt.trim())
+      .filter(stmt => stmt.length > 0);
+
+    for (const statement of statements) {
+      try {
+        const safeStatement = statement.replace(/^INSERT INTO/i, 'INSERT OR IGNORE INTO');
+        await db.sequelize.query(safeStatement);
+      } catch (err) {
+        // Silently skip duplicate inserts
+      }
+    }
+    await db.sequelize.query('PRAGMA foreign_keys = ON;');
+    console.log('Schema SQL executed and verified.');
+  }
 }
 
 async function ensureAdminAccount(db) {
@@ -328,6 +352,9 @@ db.sequelize.sync(syncOptions)
     if (db.sequelize.getDialect() === 'sqlite') {
       console.log(`SQLite database ready at ${db.sequelize.options.storage}`);
     }
+    return runInitialSqlSeed(db);
+  })
+  .then(() => {
     return ensureAdminAccount(db);
   })
   .then(() => {
@@ -339,7 +366,6 @@ db.sequelize.sync(syncOptions)
   .then(() => {
     return ensureTestTrainerAccount(db);
   })
- 
   .then(() => {
     registerDatabaseRoutes();
     startServer();

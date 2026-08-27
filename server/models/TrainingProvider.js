@@ -21,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
         // -- Dashboard / tracking fields (teammate) --
         orgDetails: { type: DataTypes.TEXT, allowNull: true },
         telephoneNo: { type: DataTypes.STRING(20), allowNull: true }, // NOTE: overlaps in meaning with mobileNo above — confirm with teammate whether to consolidate
+        emailAddress: { type: DataTypes.STRING(50), allowNull: true },
         accreditationStatus: { type: DataTypes.STRING(50), allowNull: true }
     }, { tableName: 'training_providers', timestamps: false });
 

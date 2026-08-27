@@ -121,6 +121,63 @@ router.get('/', validateToken, async (req, res) => {
   }
 });
 
+// GET /courses/available
+router.get('/available', async (req, res) => {
+  try {
+    const courses = await db.Course.findAll({
+      where: {
+        IsActive: true,
+        SubmissionStatus: 'Approved'
+      },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(courses);
+  } catch (err) {
+    console.error('Error fetching available courses:', err);
+    res.status(500).json({ error: 'Failed to fetch available courses.' });
+  }
+});
+
+// GET /courses/:id/details – fetch specific course details & modules
+router.get('/:id/details', async (req, res) => {
+  try {
+    const paramId = req.params.id;
+    const courseMatch = await findCourseById(paramId);
+
+    if (!courseMatch) {
+      return res.status(404).json({ error: 'Course not found in database.' });
+    }
+
+    // Attempt include with association, fallback to raw query if model association fails
+    let course;
+    try {
+      course = await db.Course.findOne({
+        where: { CourseID: courseMatch.CourseID },
+        include: [
+          {
+            model: db.Module,
+            required: false
+          }
+        ]
+      });
+    } catch (assocErr) {
+      // Direct query fallback if Sequelize association name is not bound
+      const coursePlain = courseMatch.get({ plain: true });
+      const modules = await db.Module.findAll({
+        where: { CourseID: courseMatch.CourseID },
+        order: [['OrderSequence', 'ASC']]
+      });
+      coursePlain.modules = modules;
+      return res.json(coursePlain);
+    }
+
+    res.json(course);
+  } catch (err) {
+    console.error('Error fetching course detail:', err);
+    res.status(500).json({ error: 'Failed to fetch course details' });
+  }
+});
+
 // ------------------------------------------------------------------
 // PUT /courses/:id  – update status (Approved / Rejected / Pending)
 // ------------------------------------------------------------------
